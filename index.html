@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17364D">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>SANS Windload</title>
+<style>
+/* Two-page phone app. Page 1: inputs, each with its explanation beside (wide) or under (phone) the field. Page 2: results, graph, one-page A4 report. Navy brand; signal colours only for results. */
+:root{--bg:#F3F5F7;--card:#FFFFFF;--ink:#14212B;--muted:#586875;--line:#D5DCE2;--brand:#17364D;--brand-ink:#FFFFFF;--accent:#C8341E;--ok:#1B7F4B;--ok-bg:#E1F3E8;--warn:#9A5B00;--warn-bg:#FCEFD2;--bad:#B3261E;--bad-bg:#FBE1DE;--field:#FFFFFF;--focus:#1F6FEB;--grid:#E3E8EC;--help:#EEF3F7;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0F1A22;--card:#16252F;--ink:#E8EEF2;--muted:#9DB0BD;--line:#2B3E4B;--brand:#2C5C80;--accent:#FF6B50;--ok:#6FD39B;--ok-bg:#163A2A;--warn:#F1B955;--warn-bg:#3B2E10;--bad:#FF8F86;--bad-bg:#40191A;--field:#0F1A22;--focus:#6AA6FF;--grid:#243541;--help:#1B2E3A;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F1A22;--card:#16252F;--ink:#E8EEF2;--muted:#9DB0BD;--line:#2B3E4B;--brand:#2C5C80;--accent:#FF6B50;--ok:#6FD39B;--ok-bg:#163A2A;--warn:#F1B955;--warn-bg:#3B2E10;--bad:#FF8F86;--bad-bg:#40191A;--field:#0F1A22;--focus:#6AA6FF;--grid:#243541;--help:#1B2E3A;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:flex;flex-direction:column;min-height:100%;max-width:980px;margin:0 auto}
+header.top{background:var(--brand);color:#fff;padding:max(14px,env(safe-area-inset-top,0px)) 16px 12px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+header.top h1{margin:0;font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+header.top span{font-size:.8rem;opacity:.8}
+main{flex:1;padding:16px 16px 110px;display:flex;flex-direction:column;gap:16px}
+section.page[hidden]{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:16px;min-width:0;margin-bottom:16px}
+.card h2{margin:0;font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.field{display:grid;grid-template-columns:minmax(0,1fr);gap:8px 18px;min-width:0}
+.field[hidden]{display:none}
+@media (min-width:640px){.field{grid-template-columns:minmax(0,5fr) minmax(0,6fr);align-items:start}}
+.ctl{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ctl label{font-size:.88rem;font-weight:700}
+.help{background:var(--help);border-radius:8px;padding:9px 12px;font-size:.82rem;color:var(--muted);line-height:1.38}
+.help b{color:var(--ink)}
+.help .ref{display:block;margin-top:4px;font-size:.75rem;opacity:.9}
+input,select,textarea{width:100%;min-height:48px;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--field);min-width:0}
+textarea{min-height:76px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.unit{display:flex;align-items:center;gap:8px}
+.unit span{color:var(--muted);font-size:.9rem;min-width:2.4em}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;z-index:5}
+.bar .in{width:100%;max-width:948px;display:flex;gap:10px}
+.btn{min-height:50px;padding:0 18px;border-radius:10px;border:1.5px solid var(--brand);background:transparent;color:var(--brand);font-weight:700;cursor:pointer;flex:1;display:flex;align-items:center;justify-content:center;text-align:center}
+:root[data-theme="dark"] .btn,:root:not([data-theme="light"]) .btn{}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn{color:var(--ink);border-color:var(--muted)}}
+.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.btn.wide{flex:2}
+.tabs{display:flex;gap:6px}
+.tab{flex:1;min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);font-weight:700;color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--brand);color:#fff;border-color:var(--brand)}
+.result{border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px;border:1.5px solid var(--line);margin-bottom:16px}
+.result .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.result .big{font-size:1.9rem;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.result .lab{font-size:.74rem;text-transform:uppercase;letter-spacing:.09em;font-weight:700}
+.result.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.result.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.result.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.result p{margin:0;color:var(--ink);font-size:.9rem}
+canvas#chart{width:100%;height:auto;display:block;border-radius:6px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.9rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th.n,td.n{text-align:right}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+tr.grp td{background:var(--help);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+tr.crit td{font-weight:700}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions .btn{flex:none}
+.note{color:var(--muted);font-size:.8rem;margin:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.9rem;max-width:90vw;z-index:9}
+#previews img{width:100%;height:auto;border:1px solid var(--line);border-radius:4px;background:#fff;display:block;margin-bottom:12px}
+.sum{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.9rem;margin:0}
+.sum dt{color:var(--muted)}.sum dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;color:var(--ink)}
+.flags{margin:0;padding-left:18px;font-size:.85rem;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><h1>SANS Windload</h1><span>SANS 10160-3 · wind actions on buildings</span></header>
+<main>
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" id="tab1" aria-selected="true" aria-controls="p1">1 · Inputs</button>
+  <button class="tab" role="tab" id="tab2" aria-selected="false" aria-controls="p2">2 · Results &amp; report</button>
+</div>
+<section class="page" id="p1" aria-labelledby="tab1"></section>
+<section class="page" id="p2" aria-labelledby="tab2" hidden>
+  <div id="res" class="result"></div>
+  <div class="card"><h2>Wind basis used</h2><dl class="sum" id="basis"></dl><ul class="flags" id="flags"></ul></div>
+  <div class="card"><h2>Pressures by zone (kPa, net of internal pressure)</h2>
+    <div class="tablewrap"><table><thead><tr><th>Zone</th><th class="n">cpe</th><th class="n">Max suction</th><th class="n">Max pressure</th></tr></thead><tbody id="tb"></tbody></table></div>
+    <p class="note">Negative = suction, acting away from the surface. Positive = pressure, acting onto the surface. Characteristic values; the report also gives factored (ULS) values.</p>
+  </div>
+  <div class="card"><h2>Graph</h2>
+    <canvas id="chart" width="900" height="720" role="img" aria-label="Bar graph of maximum suction and maximum pressure for each wall and roof zone"></canvas>
+  </div>
+  <div class="card"><h2>A4 report: summary page and step-by-step working</h2>
+    <div id="previews"></div>
+    <div class="actions">
+      <button class="btn primary" id="bShare">Share PDF</button>
+      <button class="btn" id="bSave">Save PDF</button>
+      <button class="btn" id="bMail">Email summary</button>
+      <button class="btn" id="bWa">WhatsApp summary</button>
+    </div>
+    <p class="note">Share PDF opens the phone's share sheet so you can pick WhatsApp or Gmail with the PDF attached. Email and WhatsApp summary send text only.</p>
+  </div>
+</section>
+</main>
+<div class="bar"><div class="in" id="bar"></div></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const MUNIS=[{"p":"Eastern Cape","m":"Alfred Nzo (Mount Ayliff area)","v":40,"a":800,"o":800},{"p":"Eastern Cape","m":"Amathole (Alice/Fort Beaufort area)","v":40,"a":300,"o":300},{"p":"Eastern Cape","m":"Buffalo City (East London)","v":40,"a":50,"o":50},{"p":"Eastern Cape","m":"Cacadu","v":40,"a":500,"o":500},{"p":"Eastern Cape","m":"Chris Hani (Queenstown area)","v":40,"a":600,"o":600},{"p":"Eastern Cape","m":"Joe Gqabi (Aliwal North area)","v":44,"a":1500,"o":1500},{"p":"Eastern Cape","m":"Nelson Mandela Bay (Port Elizabeth/Gqeberha)","v":40,"a":50,"o":50},{"p":"Eastern Cape","m":"O.R. Tambo (Mthatha/Umtata area)","v":40,"a":200,"o":200},{"p":"Eastern Cape","m":"Sarah Baartman (Cacadu/Graaff-Reinet area)","v":40,"a":300,"o":300},{"p":"Eastern Cape","m":"Amahlathi","v":40,"a":400,"o":400},{"p":"Eastern Cape","m":"Blue Crane Route (Somerset East)","v":40,"a":800,"o":800},{"p":"Eastern Cape","m":"Camdeboo (Graaff-Reinet)","v":40,"a":750,"o":750},{"p":"Eastern Cape","m":"Elundini (Maclear)","v":44,"a":1800,"o":1800},{"p":"Eastern Cape","m":"Emalahleni","v":40,"a":500,"o":500},{"p":"Eastern Cape","m":"Engcobo","v":40,"a":600,"o":600},{"p":"Eastern Cape","m":"Enoch Mgijima (Queenstown/Komani)","v":40,"a":500,"o":500},{"p":"Eastern Cape","m":"Great Kei","v":40,"a":50,"o":50},{"p":"Eastern Cape","m":"Intsika Yethu","v":40,"a":700,"o":700},{"p":"Eastern Cape","m":"Inxuba Yethemba (Cradock/Middelburg)","v":40,"a":900,"o":900},{"p":"Eastern Cape","m":"King Sabata Dalindyebo (Mthatha/Umtata)","v":40,"a":600,"o":600},{"p":"Eastern Cape","m":"Kouga (Humansdorp/Jeffreys Bay)","v":40,"a":50,"o":50},{"p":"Eastern Cape","m":"Koukamma (Storms River/Tsitsikamma)","v":40,"a":200,"o":200},{"p":"Eastern Cape","m":"Makana (Grahamstown/Makhanda)","v":40,"a":600,"o":600},{"p":"Eastern Cape","m":"Matatiele (Matatiele)","v":44,"a":1500,"o":1500},{"p":"Eastern Cape","m":"Mbhashe","v":40,"a":100,"o":100},{"p":"Eastern Cape","m":"Mbizana","v":40,"a":150,"o":150},{"p":"Eastern Cape","m":"Mhlontlo","v":40,"a":800,"o":800},{"p":"Eastern Cape","m":"Mnquma","v":40,"a":100,"o":100},{"p":"Eastern Cape","m":"Ndlambe (Port Alfred)","v":40,"a":50,"o":50},{"p":"Eastern Cape","m":"Ngqushwa","v":40,"a":100,"o":100},{"p":"Eastern Cape","m":"Nkonkobe","v":40,"a":600,"o":600},{"p":"Eastern Cape","m":"Ntabankulu","v":40,"a":900,"o":900},{"p":"Eastern Cape","m":"Nxuba","v":40,"a":700,"o":700},{"p":"Eastern Cape","m":"Nyandeni","v":40,"a":100,"o":100},{"p":"Eastern Cape","m":"Port St Johns","v":40,"a":50,"o":50},{"p":"Eastern Cape","m":"Raymond Mhlaba (Fort Beaufort/Alice)","v":40,"a":600,"o":600},{"p":"Eastern Cape","m":"Sakhisizwe","v":40,"a":700,"o":700},{"p":"Eastern Cape","m":"Senqu (Lady Grey)","v":44,"a":1600,"o":1600},{"p":"Eastern Cape","m":"Sunday's River Valley","v":40,"a":200,"o":200},{"p":"Eastern Cape","m":"Umzimvubu","v":40,"a":800,"o":800},{"p":"Free State","m":"Fezile Dabi (Sasolburg area)","v":40,"a":1400,"o":1400},{"p":"Free State","m":"Lejweleputswa (Welkom/Virginia)","v":40,"a":1300,"o":1300},{"p":"Free State","m":"Mangaung (Bloemfontein)","v":40,"a":1400,"o":1400},{"p":"Free State","m":"Thabo Mofutsanyana (Bethlehem/QwaQwa)","v":44,"a":1700,"o":1700},{"p":"Free State","m":"Xhariep (Trompsburg area)","v":40,"a":1300,"o":1300},{"p":"Free State","m":"Dihlabeng (Bethlehem/Clarens)","v":44,"a":1700,"o":1700},{"p":"Free State","m":"Kopanong (Trompsburg/Springfontein)","v":40,"a":1350,"o":1350},{"p":"Free State","m":"Letsemeng (Koffiefontein/Petrusburg)","v":40,"a":1300,"o":1300},{"p":"Free State","m":"Mafube (Frankfort/Cornelia)","v":40,"a":1500,"o":1500},{"p":"Free State","m":"Maluti a Phofung (QwaQwa/Phuthaditjhaba)","v":44,"a":1800,"o":1800},{"p":"Free State","m":"Mantsopa (Ladybrand)","v":40,"a":1500,"o":1500},{"p":"Free State","m":"Masilonyana (Theunissen/Brandfort)","v":40,"a":1400,"o":1400},{"p":"Free State","m":"Matjhabeng (Welkom/Virginia)","v":40,"a":1350,"o":1350},{"p":"Free State","m":"Metsimaholo (Sasolburg/Deneysville)","v":40,"a":1450,"o":1450},{"p":"Free State","m":"Mohokare (Zastron/Smithfield)","v":40,"a":1400,"o":1400},{"p":"Free State","m":"Moqhaka (Kroonstad)","v":40,"a":1400,"o":1400},{"p":"Free State","m":"Nala (Bothaville)","v":40,"a":1300,"o":1300},{"p":"Free State","m":"Naledi (Vryburg)","v":40,"a":1350,"o":1350},{"p":"Free State","m":"Ngwathe (Parys/Vredefort)","v":40,"a":1400,"o":1400},{"p":"Free State","m":"Nketoana (Reitz/Petrus Steyn)","v":40,"a":1600,"o":1600},{"p":"Free State","m":"Phumelela (Vrede/Warden)","v":44,"a":1700,"o":1700},{"p":"Free State","m":"Setsoto (Ficksburg/Clocolan)","v":44,"a":1700,"o":1700},{"p":"Free State","m":"Tokologo (Boshof/Dealesville)","v":40,"a":1250,"o":1250},{"p":"Free State","m":"Tswelopele (Hoopstad/Bultfontein)","v":40,"a":1300,"o":1300},{"p":"Gauteng","m":"City of Johannesburg (Johannesburg)","v":36,"a":1750,"o":1750},{"p":"Gauteng","m":"City of Tshwane (Pretoria)","v":36,"a":1350,"o":1350},{"p":"Gauteng","m":"Ekurhuleni (East Rand)","v":36,"a":1600,"o":1600},{"p":"Gauteng","m":"Emfuleni (Vereeniging/Vanderbijlpark)","v":36,"a":1500,"o":1500},{"p":"Gauteng","m":"Lesedi (Heidelberg/Ratanda)","v":36,"a":1550,"o":1550},{"p":"Gauteng","m":"Merafong City (Carletonville/Fochville)","v":36,"a":1650,"o":1650},{"p":"Gauteng","m":"Midvaal (Meyerton/De Deur)","v":36,"a":1500,"o":1500},{"p":"Gauteng","m":"Mogale City (Krugersdorp/Magaliesburg)","v":36,"a":1700,"o":1700},{"p":"Gauteng","m":"Rand West City (Randfontein/Westonaria)","v":36,"a":1650,"o":1650},{"p":"Gauteng","m":"Sedibeng (Vaal Triangle)","v":36,"a":1500,"o":1500},{"p":"Gauteng","m":"West Rand (Krugersdorp area)","v":36,"a":1650,"o":1650},{"p":"KwaZulu-Natal","m":"Amajuba (Newcastle area)","v":40,"a":1300,"o":1300},{"p":"KwaZulu-Natal","m":"eThekwini (Durban)","v":36,"a":50,"o":50},{"p":"KwaZulu-Natal","m":"Harry Gwala (Ixopo/Kokstad)","v":40,"a":1200,"o":1200},{"p":"KwaZulu-Natal","m":"iLembe (KwaDukuza/Stanger)","v":36,"a":100,"o":100},{"p":"KwaZulu-Natal","m":"King Cetshwayo (Eshowe/Melmoth)","v":36,"a":1000,"o":1000},{"p":"KwaZulu-Natal","m":"Ugu (Port Shepstone area)","v":36,"a":800,"o":800},{"p":"KwaZulu-Natal","m":"uMgungundlovu (Pietermaritzburg area)","v":40,"a":1100,"o":1100},{"p":"KwaZulu-Natal","m":"uMkhanyakude (Mkuze/Hluhluwe)","v":36,"a":600,"o":600},{"p":"KwaZulu-Natal","m":"uMzinyathi (Dundee/Glencoe)","v":40,"a":1200,"o":1200},{"p":"KwaZulu-Natal","m":"uThukela (Ladysmith area)","v":44,"a":1100,"o":1100},{"p":"KwaZulu-Natal","m":"Zululand (Ulundi/Nongoma)","v":40,"a":900,"o":900},{"p":"KwaZulu-Natal","m":"Abaqulusi (Vryheid)","v":40,"a":1100,"o":150},{"p":"KwaZulu-Natal","m":"Alfred Duma (Ladysmith)","v":44,"a":1200,"o":1200},{"p":"KwaZulu-Natal","m":"Big Five Hlabisa","v":36,"a":1000,"o":1000},{"p":"KwaZulu-Natal","m":"Dannhauser (Dannhauser)","v":40,"a":1200,"o":1200},{"p":"KwaZulu-Natal","m":"Edumbe","v":40,"a":100,"o":100},{"p":"KwaZulu-Natal","m":"Emadlangeni (Utrecht)","v":44,"a":1250,"o":150},{"p":"KwaZulu-Natal","m":"Endumeni (Dundee)","v":40,"a":100,"o":100},{"p":"KwaZulu-Natal","m":"Greater Kokstad (Kokstad)","v":40,"a":1000,"o":50},{"p":"KwaZulu-Natal","m":"Hlabisa","v":36,"a":50,"o":50},{"p":"KwaZulu-Natal","m":"Impendle (Impendle)","v":40,"a":200,"o":200},{"p":"KwaZulu-Natal","m":"Inkosi Langalibalele (Estcourt)","v":44,"a":100,"o":100},{"p":"KwaZulu-Natal","m":"Jozini (Jozini/Ingwavuma)","v":36,"a":600,"o":600},{"p":"KwaZulu-Natal","m":"KwaDukuza (Stanger)","v":36,"a":1200,"o":1200},{"p":"KwaZulu-Natal","m":"Mandeni (Mandeni/Sundumbili)","v":36,"a":800,"o":800},{"p":"KwaZulu-Natal","m":"Maphumulo (Maphumulo)","v":36,"a":1000,"o":1000},{"p":"KwaZulu-Natal","m":"Mkhambathini","v":40,"a":900,"o":900},{"p":"KwaZulu-Natal","m":"Mpofana","v":40,"a":1000,"o":1000},{"p":"KwaZulu-Natal","m":"Msinga","v":40,"a":300,"o":300},{"p":"KwaZulu-Natal","m":"Msunduzi (Pietermaritzburg)","v":40,"a":650,"o":400},{"p":"KwaZulu-Natal","m":"Mthonjaneni","v":40,"a":200,"o":200},{"p":"KwaZulu-Natal","m":"Mtubatuba (Mtubatuba/St Lucia)","v":36,"a":100,"o":100},{"p":"KwaZulu-Natal","m":"Newcastle (Newcastle)","v":40,"a":800,"o":800},{"p":"KwaZulu-Natal","m":"Nkandla","v":40,"a":1100,"o":1100},{"p":"KwaZulu-Natal","m":"Nongoma (Nongoma)","v":40,"a":1000,"o":1000},{"p":"KwaZulu-Natal","m":"Nqutu","v":40,"a":1200,"o":1200},{"p":"KwaZulu-Natal","m":"Okhahlamba (Bergville)","v":44,"a":1100,"o":1100},{"p":"KwaZulu-Natal","m":"Ray Nkonyeni (Port Shepstone)","v":36,"a":1300,"o":1300},{"p":"KwaZulu-Natal","m":"Richmond (Richmond)","v":40,"a":800,"o":800},{"p":"KwaZulu-Natal","m":"The Msunduzi","v":40,"a":650,"o":1000},{"p":"KwaZulu-Natal","m":"Ubuhlebezwe (Ixopo)","v":40,"a":700,"o":700},{"p":"KwaZulu-Natal","m":"Ulundi (Ulundi)","v":40,"a":500,"o":500},{"p":"KwaZulu-Natal","m":"Umdoni (Scottburgh/Umzinto)","v":36,"a":600,"o":600},{"p":"KwaZulu-Natal","m":"Umfolozi","v":36,"a":150,"o":150},{"p":"KwaZulu-Natal","m":"Umhlabuyalingana","v":36,"a":500,"o":500},{"p":"KwaZulu-Natal","m":"uMhlathuze (Richards Bay/Empangeni)","v":36,"a":400,"o":400},{"p":"KwaZulu-Natal","m":"uMlalazi","v":36,"a":300,"o":300},{"p":"KwaZulu-Natal","m":"Umshwathi","v":40,"a":100,"o":100},{"p":"KwaZulu-Natal","m":"Umvoti (Greytown)","v":40,"a":800,"o":800},{"p":"KwaZulu-Natal","m":"Umzimkhulu (Umzimkhulu)","v":40,"a":1100,"o":1100},{"p":"KwaZulu-Natal","m":"Umzumbe (Hibberdene/Umzumbe)","v":36,"a":900,"o":900},{"p":"KwaZulu-Natal","m":"uPhongolo (Pongola)","v":40,"a":1000,"o":1000},{"p":"Limpopo","m":"Capricorn (Polokwane/Pietersburg area)","v":36,"a":1300,"o":1300},{"p":"Limpopo","m":"Mopani (Tzaneen/Phalaborwa area)","v":36,"a":600,"o":600},{"p":"Limpopo","m":"Sekhukhune (Groblersdal/Marble Hall)","v":36,"a":1000,"o":1000},{"p":"Limpopo","m":"Vhembe (Thohoyandou/Louis Trichardt)","v":36,"a":900,"o":900},{"p":"Limpopo","m":"Waterberg (Modimolle/Bela-Bela area)","v":36,"a":1200,"o":1200},{"p":"Limpopo","m":"Ba-Phalaborwa (Phalaborwa)","v":36,"a":1350,"o":1350},{"p":"Limpopo","m":"Bela-Bela (Warmbaths)","v":36,"a":1000,"o":1000},{"p":"Limpopo","m":"Blouberg (Senwabarwana/Bochum)","v":36,"a":800,"o":800},{"p":"Limpopo","m":"Collins Chabane (Malamulele)","v":36,"a":1200,"o":1200},{"p":"Limpopo","m":"Elias Motsoaledi (Groblersdal)","v":36,"a":500,"o":500},{"p":"Limpopo","m":"Ephraim Mogale (Marble Hall)","v":36,"a":450,"o":450},{"p":"Limpopo","m":"Fetakgomo Tubatse (Burgersfort/Steelpoort)","v":36,"a":600,"o":600},{"p":"Limpopo","m":"Greater Giyani (Giyani)","v":36,"a":700,"o":700},{"p":"Limpopo","m":"Greater Letaba (Modjadjiskloof/Duiwelskloof)","v":36,"a":550,"o":550},{"p":"Limpopo","m":"Greater Tzaneen (Tzaneen)","v":36,"a":1100,"o":1100},{"p":"Limpopo","m":"Lephalale (Ellisras)","v":36,"a":1000,"o":1000},{"p":"Limpopo","m":"Lepelle-Nkumpi (Lebowakgomo)","v":36,"a":900,"o":900},{"p":"Limpopo","m":"Makhado (Louis Trichardt)","v":36,"a":1000,"o":1000},{"p":"Limpopo","m":"Makhuduthamaga (Jane Furse)","v":36,"a":700,"o":700},{"p":"Limpopo","m":"Maruleng (Hoedspruit)","v":36,"a":600,"o":600},{"p":"Limpopo","m":"Modimolle-Mookgophong (Nylstroom/Naboomspruit)","v":36,"a":800,"o":800},{"p":"Limpopo","m":"Mogalakwena (Mokopane/Potgietersrus)","v":36,"a":900,"o":900},{"p":"Limpopo","m":"Molemole (Mogwadi/Dendron)","v":36,"a":1100,"o":1100},{"p":"Limpopo","m":"Musina (Messina)","v":36,"a":1300,"o":1300},{"p":"Limpopo","m":"Polokwane (Pietersburg)","v":36,"a":1200,"o":1200},{"p":"Limpopo","m":"Thabazimbi (Thabazimbi)","v":36,"a":1100,"o":1100},{"p":"Limpopo","m":"Thulamela (Thohoyandou)","v":36,"a":1250,"o":1250},{"p":"Mpumalanga","m":"Ehlanzeni (Nelspruit/White River area)","v":32,"a":600,"o":1600},{"p":"Mpumalanga","m":"Gert Sibande (Ermelo/Standerton area)","v":36,"a":1500,"o":1500},{"p":"Mpumalanga","m":"Nkangala (Witbank/Middelburg area)","v":36,"a":1550,"o":1550},{"p":"Mpumalanga","m":"Albert Luthuli","v":36,"a":1100,"o":1100},{"p":"Mpumalanga","m":"Bushbuckridge (Bushbuckridge)","v":32,"a":500,"o":900},{"p":"Mpumalanga","m":"Chief Albert Luthuli (Carolina/Ermelo area)","v":36,"a":1200,"o":1200},{"p":"Mpumalanga","m":"Dipaleseng (Balfour)","v":36,"a":1600,"o":1600},{"p":"Mpumalanga","m":"Dr JS Moroka (Siyabuswa)","v":36,"a":1650,"o":1650},{"p":"Mpumalanga","m":"Dr Pixley Ka Isaka Seme (Volksrust)","v":36,"a":1700,"o":1700},{"p":"Mpumalanga","m":"Emakhazeni (Belfast)","v":40,"a":1750,"o":1750},{"p":"Mpumalanga","m":"Emalahleni","v":36,"a":1600,"o":1600},{"p":"Mpumalanga","m":"Govan Mbeki (Secunda/Bethal)","v":36,"a":1600,"o":1600},{"p":"Mpumalanga","m":"Lekwa (Standerton)","v":36,"a":1650,"o":1650},{"p":"Mpumalanga","m":"Mbombela (Nelspruit)","v":32,"a":660,"o":1700},{"p":"Mpumalanga","m":"Mkhondo (Piet Retief)","v":36,"a":1550,"o":1550},{"p":"Mpumalanga","m":"Msukaligwa (Ermelo)","v":36,"a":1600,"o":1600},{"p":"Mpumalanga","m":"Nkomazi (Komatipoort/Malelane)","v":32,"a":300,"o":1650},{"p":"Mpumalanga","m":"Steve Tshwete (Middelburg)","v":36,"a":1500,"o":1500},{"p":"Mpumalanga","m":"Thaba Chweu (Lydenburg/Sabie/Graskop)","v":40,"a":1600,"o":1600},{"p":"Mpumalanga","m":"Thembisile Hani (KwaMhlanga)","v":36,"a":1550,"o":1550},{"p":"Mpumalanga","m":"Victor Khanye (Delmas)","v":36,"a":1600,"o":1600},{"p":"North West","m":"Bojanala Platinum (Rustenburg/Brits area)","v":36,"a":1400,"o":1400},{"p":"North West","m":"Dr Kenneth Kaunda (Klerksdorp/Potchefstroom area)","v":36,"a":1350,"o":1350},{"p":"North West","m":"Dr Ruth Segomotsi Mompati (Vryburg area)","v":36,"a":1300,"o":1300},{"p":"North West","m":"Ngaka Modiri Molema (Mafikeng area)","v":36,"a":1400,"o":1400},{"p":"North West","m":"City of Matlosana (Klerksdorp)","v":36,"a":1500,"o":1500},{"p":"North West","m":"Ditsobotla (Lichtenburg)","v":36,"a":1400,"o":1400},{"p":"North West","m":"Greater Taung (Taung)","v":36,"a":1350,"o":1350},{"p":"North West","m":"JB Marks (Potchefstroom/Ventersdorp)","v":36,"a":1300,"o":1300},{"p":"North West","m":"Kagisano-Molopo (Ganyesa)","v":36,"a":1450,"o":1450},{"p":"North West","m":"Kgetlengrivier (Koster/Swartruggens)","v":36,"a":1400,"o":1400},{"p":"North West","m":"Lekwa-Teemane (Christiana/Bloemhof)","v":36,"a":1350,"o":1350},{"p":"North West","m":"Madibeng (Brits/Hartbeespoort)","v":36,"a":1300,"o":1300},{"p":"North West","m":"Mafikeng","v":36,"a":1200,"o":1200},{"p":"North West","m":"Mahikeng (Mafikeng)","v":36,"a":1250,"o":1250},{"p":"North West","m":"Mamusa (Schweizer-Reneke)","v":36,"a":1300,"o":1300},{"p":"North West","m":"Maquassi Hills (Wolmaransstad)","v":36,"a":1350,"o":1350},{"p":"North West","m":"Moretele (Temba/Hammanskraal)","v":36,"a":1300,"o":1300},{"p":"North West","m":"Moses Kotane (Mogwase/Sun City area)","v":36,"a":1400,"o":1400},{"p":"North West","m":"Naledi (Vryburg)","v":36,"a":1350,"o":1350},{"p":"North West","m":"Ramotshere Moiloa (Zeerust)","v":36,"a":1300,"o":1300},{"p":"North West","m":"Ratlou (Setlagole)","v":36,"a":1350,"o":1350},{"p":"North West","m":"Rustenburg (Rustenburg)","v":36,"a":1300,"o":1300},{"p":"North West","m":"Tlokwe City Council","v":36,"a":1400,"o":1400},{"p":"North West","m":"Tswaing (Delareyville)","v":36,"a":1350,"o":1350},{"p":"North West","m":"Ventersdorp (Ventersdorp/Tlokwe)","v":36,"a":1300,"o":1300},{"p":"Northern Cape","m":"Frances Baard (Kimberley area)","v":40,"a":1200,"o":1200},{"p":"Northern Cape","m":"John Taolo Gaetsewe (Kuruman area)","v":40,"a":1100,"o":1100},{"p":"Northern Cape","m":"Namakwa (Springbok area)","v":44,"a":900,"o":900},{"p":"Northern Cape","m":"Pixley ka Seme (De Aar area)","v":40,"a":1000,"o":1000},{"p":"Northern Cape","m":"ZF Mgcawu (Upington area)","v":40,"a":1100,"o":1100},{"p":"Northern Cape","m":"Dawid Kruiper (Upington)","v":40,"a":1200,"o":1200},{"p":"Northern Cape","m":"Dikgatlong (Barkly West)","v":40,"a":1150,"o":1150},{"p":"Northern Cape","m":"Emthanjeni (De Aar)","v":40,"a":1100,"o":1100},{"p":"Northern Cape","m":"Ga-Segonyana (Kuruman)","v":40,"a":1150,"o":1150},{"p":"Northern Cape","m":"Gamagara (Kathu/Sishen)","v":40,"a":1050,"o":1050},{"p":"Northern Cape","m":"Hantam (Calvinia)","v":44,"a":1100,"o":1100},{"p":"Northern Cape","m":"Joe Morolong (Mothibistad)","v":40,"a":1000,"o":1000},{"p":"Northern Cape","m":"Kai !Garib (Keimoes/Kakamas)","v":40,"a":800,"o":800},{"p":"Northern Cape","m":"Kamiesberg (Garies/Kamieskroon)","v":44,"a":600,"o":600},{"p":"Northern Cape","m":"Kareeberg (Carnarvon)","v":40,"a":1300,"o":300},{"p":"Northern Cape","m":"Karoo Hoogland (Sutherland/Fraserburg)","v":44,"a":1000,"o":100},{"p":"Northern Cape","m":"Kgatelopele (Danielskuil)","v":40,"a":500,"o":500},{"p":"Northern Cape","m":"Kh\u00e2i-Ma","v":44,"a":700,"o":700},{"p":"Northern Cape","m":"Magareng (Warrenton)","v":40,"a":1200,"o":1200},{"p":"Northern Cape","m":"Nama Khoi (Springbok)","v":44,"a":1100,"o":1100},{"p":"Northern Cape","m":"Phokwane (Hartswater/Jan Kempdorp)","v":40,"a":1000,"o":1000},{"p":"Northern Cape","m":"Renosterberg (Petrusville/Philipstown)","v":40,"a":1150,"o":1150},{"p":"Northern Cape","m":"Richtersveld (Port Nolloth)","v":44,"a":1100,"o":1100},{"p":"Northern Cape","m":"Siyancuma (Douglas)","v":40,"a":1050,"o":1050},{"p":"Northern Cape","m":"Siyathemba (Prieska)","v":40,"a":1000,"o":1000},{"p":"Northern Cape","m":"Sol Plaatje (Kimberley)","v":40,"a":1100,"o":1100},{"p":"Northern Cape","m":"Thembelihle (Hopetown/Strydenburg)","v":40,"a":900,"o":900},{"p":"Northern Cape","m":"Tsantsabane (Postmasburg)","v":40,"a":850,"o":850},{"p":"Northern Cape","m":"Ubuntu (Victoria West)","v":40,"a":800,"o":800},{"p":"Northern Cape","m":"Umsobomvu (Colesberg/Noupoort)","v":40,"a":950,"o":950},{"p":"Western Cape","m":"Cape Winelands (Paarl/Worcester area)","v":40,"a":200,"o":200},{"p":"Western Cape","m":"Central Karoo (Beaufort West area)","v":40,"a":850,"o":50},{"p":"Western Cape","m":"City of Cape Town (Cape Town)","v":40,"a":100,"o":100},{"p":"Western Cape","m":"Garden Route (George/Knysna area)","v":36,"a":150,"o":150},{"p":"Western Cape","m":"Overberg (Hermanus/Swellendam area)","v":44,"a":100,"o":100},{"p":"Western Cape","m":"West Coast (Saldanha/Vredenburg area)","v":44,"a":50,"o":50},{"p":"Western Cape","m":"Beaufort West (Beaufort West)","v":40,"a":850,"o":300},{"p":"Western Cape","m":"Bergrivier (Piketberg/Porterville)","v":44,"a":250,"o":250},{"p":"Western Cape","m":"Bitou (Plettenberg Bay)","v":36,"a":400,"o":400},{"p":"Western Cape","m":"Breede Valley (Worcester)","v":40,"a":350,"o":350},{"p":"Western Cape","m":"Cape Agulhas (Bredasdorp/Struisbaai)","v":44,"a":300,"o":300},{"p":"Western Cape","m":"Cederberg (Citrusdal/Clanwilliam)","v":44,"a":100,"o":100},{"p":"Western Cape","m":"Drakenstein (Paarl/Wellington)","v":40,"a":150,"o":150},{"p":"Western Cape","m":"George (George)","v":36,"a":200,"o":200},{"p":"Western Cape","m":"Hessequa (Riversdale/Stilbaai)","v":40,"a":50,"o":50},{"p":"Western Cape","m":"Kannaland (Calitzdorp/Oudtshoorn area)","v":40,"a":400,"o":100},{"p":"Western Cape","m":"Knysna (Knysna)","v":36,"a":50,"o":50},{"p":"Western Cape","m":"Laingsburg (Laingsburg)","v":40,"a":700,"o":150},{"p":"Western Cape","m":"Langeberg (Robertson/Montagu)","v":40,"a":50,"o":50},{"p":"Western Cape","m":"Matzikama (Vredendal/Vanrhynsdorp)","v":44,"a":100,"o":100},{"p":"Western Cape","m":"Mossel Bay (Mossel Bay)","v":40,"a":50,"o":50},{"p":"Western Cape","m":"Oudtshoorn (Oudtshoorn)","v":40,"a":350,"o":100},{"p":"Western Cape","m":"Overstrand (Hermanus/Kleinmond)","v":44,"a":150,"o":150},{"p":"Western Cape","m":"Prince Albert (Prince Albert)","v":40,"a":600,"o":200},{"p":"Western Cape","m":"Saldanha Bay (Saldanha/Vredenburg)","v":44,"a":100,"o":100},{"p":"Western Cape","m":"Stellenbosch (Stellenbosch)","v":40,"a":50,"o":50},{"p":"Western Cape","m":"Swartland (Malmesbury/Darling)","v":44,"a":50,"o":50},{"p":"Western Cape","m":"Swellendam (Swellendam)","v":40,"a":100,"o":100},{"p":"Western Cape","m":"Theewaterskloof (Caledon/Grabouw)","v":44,"a":50,"o":50},{"p":"Western Cape","m":"Witzenberg (Tulbagh/Ceres)","v":40,"a":100,"o":100}];
+const VERSION="1.0";
+/* ===================== engine (SANS 10160-3, corrected) ===================== */
+const TERR={A:{zg:250,z0:0,zc:1,al:.07,name:"A - Sea / coast"},B:{zg:300,z0:0,zc:2,al:.095,name:"B - Open terrain"},C:{zg:350,z0:3,zc:5,al:.12,name:"C - Suburban / industrial"},D:{zg:400,z0:5,zc:10,al:.15,name:"D - Urban, tall buildings"}};
+const r1=(v,d)=>{const f=Math.pow(10,d);return Math.round(v*f)/f};
+/* roof tables, wind direction 0 deg: [pitch, {zone:[min cpe, max cpe]}] */
+const S=(a,b)=>[a,b===undefined?a:b];
+const FLAT={0:{F:S(-1.8),G:S(-1.2),H:S(-.7),I:S(-.2,.2)},.025:{F:S(-1.6),G:S(-1.1),H:S(-.7),I:S(-.2,.2)},.05:{F:S(-1.4),G:S(-.9),H:S(-.7),I:S(-.2,.2)},.1:{F:S(-1.2),G:S(-.8),H:S(-.7),I:S(-.2,.2)}};
+const MONO=[[5,{F:S(-1.7,0),G:S(-1.2,0),H:S(-.6,0)}],[15,{F:S(-.9,.2),G:S(-.8,.2),H:S(-.3,.2)}],[30,{F:S(-.5,.7),G:S(-.5,.7),H:S(-.2,.4)}],[45,{F:S(0,.7),G:S(0,.7),H:S(0,.6)}],[60,{F:S(.7),G:S(.7),H:S(.7)}],[75,{F:S(.8),G:S(.8),H:S(.8)}]];
+const DUO=[[5,{F:S(-1.7,0),G:S(-1.2,0),H:S(-.6,0),I:S(-.6),J:S(-.6,.2)}],[15,{F:S(-.9,.2),G:S(-.8,.2),H:S(-.3,.2),I:S(-.4,0),J:S(-1,0)}],[30,{F:S(-.5,.7),G:S(-.5,.7),H:S(-.2,.4),I:S(-.4,0),J:S(-.5,0)}],[45,{F:S(0,.7),G:S(0,.7),H:S(0,.6),I:S(-.2,0),J:S(-.3,0)}],[60,{F:S(.7),G:S(.7),H:S(.7),I:S(-.2,0),J:S(-.3,0)}],[75,{F:S(.8),G:S(.8),H:S(.8),I:S(-.2,0),J:S(-.3,0)}]];
+function interp(tab,a){
+  if(a<=tab[0][0])return tab[0][1];if(a>=tab[tab.length-1][0])return tab[tab.length-1][1];
+  for(let i=0;i<tab.length-1;i++){const [a0,z0]=tab[i],[a1,z1]=tab[i+1];if(a>=a0&&a<=a1){const t=(a-a0)/(a1-a0),o={};for(const k in z0)o[k]=[z0[k][0]+t*(z1[k][0]-z0[k][0]),z0[k][1]+t*(z1[k][1]-z0[k][1])];return o}}
+}
+function cprobOf(T){if(T===50)return 1;const k=.2,n=.5,p=1/T;return r1(Math.pow((1-k*Math.log(-Math.log(1-p)))/(1-k*Math.log(-Math.log(.98))),n),3)}
+function calc(inp){
+  const num=v=>(v===""||v===null||v===undefined)?NaN:+v;
+  const m=MUNIS.find(x=>x.p===inp.prov&&x.m===inp.muni);
+  const vb0=m?m.v:NaN;
+  const alt=inp.asrc==="Custom altitude"?num(inp.acus):(m?m.a:NaN);
+  const T=num(inp.T),h=num(inp.h),b=num(inp.b),d=num(inp.d),g=num(inp.gam);
+  const co=inp.topo==="No - flat or gently undulating"?1:num(inp.co);
+  const terr=TERR[inp.terr];
+  const flags=[];
+  const ok=[vb0,alt,T,h,b,d,g,co].every(isFinite)&&vb0>0&&T>=2&&h>0&&b>0&&d>0&&g>0&&co>0&&!!terr;
+  if(!ok)return {valid:false,flags:["Check inputs: all dimensions, wind speed, altitude, return period and factors must be positive numbers."]};
+  const cprob=cprobOf(T), vb=r1(cprob*vb0,1);
+  const cr=r1(1.36*Math.pow((Math.max(h,terr.zc)-terr.z0)/(terr.zg-terr.z0),terr.al),3);
+  const vp=r1(cr*co*vb,1);
+  const rho=r1(1.2*Math.pow(1-.0000226*alt,5.256),2);
+  const qpPa=Math.round(.5*rho*vp*vp), q=qpPa/1000;
+  const uls=qpPa*g;
+  const e=Math.min(b,2*h), hd=h/d;
+  /* walls (EN/SANS Table 6, cpe,10) */
+  const cD=hd>=1?.8:hd<=.25?.7:.7+.1*(hd-.25)/.75;
+  const cE=hd>=5?-.7:hd>=1?-.5-.2*(hd-1)/4:hd<=.25?-.3:-.3-.2*(hd-.25)/.75;
+  const walls=[["D","Windward wall",S(cD)],["E","Leeward wall",S(cE)],["A","Side wall, near corner",S(-1.2)]];
+  if(d>e/5)walls.push(["B","Side wall, middle",S(-.8)]);
+  if(d>e)walls.push(["C","Side wall, far",S(-.5)]);
+  /* roof */
+  let roof=[],roofName="";
+  const pitch=num(inp.pitch);
+  const flatRoof=inp.roof==="Flat"||pitch<5;
+  if(flatRoof){const hp=num(inp.hp);const z=FLAT[hp]||FLAT[0];roofName="Flat roof"+(hp?" (parapet hp/h "+hp+")":" (sharp eaves)");
+    roof=[["F","Corner",z.F],["G","Edge",z.G],["H","Middle",z.H],["I","Centre",z.I]]}
+  else if(inp.roof==="Mono-pitch"){const z=interp(MONO,pitch);roofName="Mono-pitch "+pitch+"°";roof=[["F","Corner",z.F],["G","Edge",z.G],["H","Middle",z.H]]}
+  else{const z=interp(DUO,pitch);roofName=(inp.roof==="Hipped"?"Hipped (duo-pitch values, approximate) ":"Duo-pitch ")+pitch+"°";roof=[["F","Windward corner",z.F],["G","Windward edge",z.G],["H","Windward middle",z.H],["I","Leeward",z.I],["J","Leeward ridge edge",z.J]];
+    if(inp.roof==="Hipped")flags.push("Hipped roof: duo-pitch coefficients used as an approximation. Check against the hipped-roof table of SANS 10160-3.")}
+  /* internal pressure */
+  let cpiHi=.2,cpiLo=-.3,cpiNote="cpi +0.2 and -0.3 both checked";
+  if(/^pos/.test(inp.cpiSel)){cpiLo=.2;cpiNote="cpi +0.2 (pressure inside)"}else if(/^neg/.test(inp.cpiSel)){cpiHi=-.3;cpiNote="cpi -0.3 (suction inside)"}
+  if(inp.dom&&inp.dom.startsWith("Yes")){
+    const f=/3/.test(inp.ratio)?.9:.75;const face=inp.face;
+    const ce=face==="Windward wall"?cD:face==="Leeward wall"?cE:-1.2;
+    cpiHi=cpiLo=r1(f*ce,3);cpiNote="dominant opening: cpi = "+f+" × cpe(face) = "+cpiHi;
+  }
+  const net=c=>({lo:r1(q*c[0]-q*cpiHi,3),hi:r1(q*c[1]-q*cpiLo,3)});
+  const W=walls.map(([z,n,c])=>({z,n,cpe:c,...net(c),grp:"Walls"}));
+  const R=roof.map(([z,n,c])=>({z,n,cpe:c,...net(c),grp:"Roof"}));
+  const sideLeeLo=Math.min(...W.filter(x=>x.z!=="D").map(x=>x.lo));
+  const wallIn=Math.max(...W.map(x=>x.hi));
+  const roofUp=Math.min(...R.map(x=>x.lo)), roofDown=Math.max(...R.map(x=>x.hi));
+  const H=R.find(x=>x.z==="H");
+  const roofGen=H?H.lo:roofUp;
+  const designs=[
+    ["Max wall suction (outward)",sideLeeLo,"Cladding and fixings, wall panels"],
+    ["Max wall pressure (inward)",wallIn,"Windward cladding, glazing, framing"],
+    ["Max roof uplift - worst zone",roofUp,"Roof fixings at corners and edges"],
+    ["Roof uplift - general area (zone H)",roofGen,"Purlins, general roof sheeting"],
+    ["Max roof downward pressure",roofDown,"Roof structure, steep pitches"]
+  ];
+  if(inp.topo!=="No - flat or gently undulating"&&co>1.0)flags.push("Topography factor co = "+co+" applied. Confirm against SANS 10160-3 Annex for the actual site.");
+  if(h>b)flags.push("Building is taller than it is wide (h > b): qp taken at the full height h for all faces, which is conservative for the lower wall zones.");
+  if(alt>2000)flags.push("Altitude above 2000 m: air density formula is extrapolated.");
+  if(T!==50)flags.push("Return period "+T+" years: cprob = "+cprob+" applied to vb,0.");
+  flags.push("Wind direction 0° (wind across the ridge) only for pitched roofs. Check the other directions and local coefficients (cpe,1) for small elements.");
+  return {valid:true,m,vb0,alt,T,cprob,vb,terr:inp.terr,terrName:terr.name,h,b,d,co,cr,vp,rho,qpPa,q,uls,g,e,hd,cD,cE,W,R,roofName,cpiHi,cpiLo,cpiNote,designs,flags,
+    asrc:inp.asrc,bracket:null,topo:co>1?"Yes, co "+co:"No (co 1.0)",domOn:!!(inp.dom&&inp.dom.startsWith("Yes"))};
+}
+/* ===================== input definitions with explanations ===================== */
+const PROVS=[...new Set(MUNIS.map(x=>x.p))];
+const SECTIONS=[
+ {t:"Customer and site",f:[
+  {id:"cust",l:"Customer name",type:"text",ph:"e.g. Randburg Glass",h:"<b>Who the report is for.</b> Printed at the top of the A4 summary."},
+  {id:"addr",l:"Site address",type:"area",ph:"Street, suburb, city",h:"<b>Physical address of the building.</b> Printed on the summary. The wind speed and altitude below are taken from the municipality chosen for this site."},
+  {id:"ref",l:"Job / site reference (optional)",type:"text",ph:"e.g. Unit 4 front elevation",h:"<b>Your own job number or description.</b> Printed on the summary."},
+  {id:"date",l:"Date",type:"date",h:"<b>Date of the calculation.</b> Printed on the report. Today's date is filled in for you."},
+  {id:"contact",l:"Contact person (optional)",type:"text",ph:"e.g. Wyn Robertson",h:"<b>Who to speak to about this job.</b> Printed on the summary."},
+  {id:"cell",l:"Cell number (optional)",type:"tel",ph:"e.g. 082 000 0000",h:"<b>Contact cell number.</b> Printed on the summary."},
+  {id:"email",l:"Email address (optional)",type:"email",ph:"name@company.co.za",h:"<b>Contact email.</b> Printed on the summary."}]},
+ {t:"Wind speed and altitude",f:[
+  {id:"prov",l:"Province",type:"sel",opts:()=>PROVS,h:"<b>Province of the site.</b> Choosing it filters the municipality list below."},
+  {id:"muni",l:"Municipality",type:"sel",opts:i=>MUNIS.filter(x=>x.p===i.prov).map(x=>x.m),h:"<b>Municipality where the building stands.</b> Gives the fundamental wind speed vb,0 (workbook cell B8) and a typical altitude, exactly as your Excel lookup does; vb (cell B11) is worked out from it on the report. Pick the municipality the site is in, not the nearest town.",ref:"SANS 10160-3 wind speed table by municipality"},
+  {id:"asrc",l:"Altitude source",type:"sel",opts:()=>["Municipality typical altitude","Custom altitude"],h:"<b>Typical municipality altitude, or the actual site altitude.</b> Altitude lowers air density: higher sites carry less wind pressure. Use the real site altitude whenever you know it (a GPS or map reading)."},
+  {id:"acus",l:"Site altitude above sea level",type:"num",unit:"m",show:i=>i.asrc==="Custom altitude",h:"<b>Height of the site above mean sea level.</b> Used for air density ρ = 1.2·(1 − 0.0000226·altitude)^5.256."},
+  {id:"T",l:"Return period",type:"num",unit:"years",h:"<b>Design life for which the wind is expected once.</b> 50 years is the standard for buildings (annual probability 2%). Other values scale vb,0 by cprob.",ref:"SANS 10160-3 clause 7.2 (cprob)"}]},
+ {t:"Terrain",f:[
+  {id:"terr",l:"Terrain category",type:"sel",opts:()=>Object.keys(TERR),lab:k=>TERR[k].name,h:"<b>How rough the ground upwind is.</b> A = sea or open coast. B = open country, few obstacles. C = suburbs, industrial areas, forest. D = city centre, many tall buildings. Rougher terrain slows the wind near the ground; category A gives the highest pressure (the worst case).",ref:"SANS 10160-3 Tables 1 and 2"}]},
+ {t:"Building",f:[
+  {id:"h",l:"Building height h",type:"num",unit:"m",h:"<b>Ground level to the top of the roof (ridge or parapet).</b> The wind pressure is worked out at this height.",ref:"clause 8.3"},
+  {id:"b",l:"Breadth b (across the wind)",type:"num",unit:"m",h:"<b>Width of the face the wind hits.</b> It sets the size of the high-suction edge zones (e = smaller of b and 2h). Run the check again with b and d swapped for the other wind direction."},
+  {id:"d",l:"Depth d (along the wind)",type:"num",unit:"m",h:"<b>Length of the building in the wind direction.</b> The ratio h/d sets the windward and leeward wall coefficients."}]},
+ {t:"Topography",f:[
+  {id:"topo",l:"Consider topography?",type:"sel",opts:()=>["No - flat or gently undulating","Yes - hill, ridge or escarpment"],h:"<b>Is the site on or near a hill, ridge or escarpment?</b> Choose Yes when the upwind slope is steeper than about 3°. Wind speeds up over crests."},
+  {id:"co",l:"Topography factor co",type:"sel",opts:()=>["1.1","1.2","1.3","1.4"],show:i=>/^Yes/.test(i.topo),h:"<b>Speed-up factor on the wind.</b> 1.1 slight, 1.2 moderate hill, 1.3 steep hill, 1.4 ridge crest. These are screening values; use the Annex calculation for a final design.",ref:"SANS 10160-3 clause 7.3.3"}]},
+ {t:"Roof",f:[
+  {id:"roof",l:"Roof type",type:"sel",opts:()=>["Flat","Mono-pitch","Duo-pitch","Hipped"],h:"<b>Shape of the roof.</b> Flat roofs and pitches under 5° use the flat-roof table. Mono = one slope, duo = gable (two slopes), hipped = four slopes (approximated by the gable values).",ref:"SANS 10160-3 Tables 7 to 12"},
+  {id:"pitch",l:"Roof pitch",type:"sel",opts:()=>["5","10","15","20","25","30","35","40","45","60","75"],lab:k=>k+"°",show:i=>i.roof!=="Flat",h:"<b>Slope of the roof from horizontal.</b> Coefficients change with pitch: shallow roofs have the largest uplift."},
+  {id:"hp",l:"Parapet height ratio hp/h",type:"sel",opts:()=>["0","0.025","0.05","0.1"],lab:k=>k==="0"?"Sharp eaves (no parapet)":"hp/h = "+k,show:i=>i.roof==="Flat",h:"<b>Parapet height divided by building height.</b> A parapet lowers the edge and corner suction. Choose sharp eaves when there is no parapet."}]},
+ {t:"Internal pressure",f:[
+  {id:"dom",l:"Dominant opening?",type:"sel",opts:()=>["No - openings evenly spread","Yes - one large opening"],h:"<b>Is there one opening much larger than all the rest together</b> (roller door, shop front, glazing that could fail in a storm)? If yes the internal pressure follows that opening instead of the normal +0.2 / −0.3 pair.",ref:"SANS 10160-3 clause 8.3.9"},
+  {id:"cpiSel",l:"Internal pressure case",type:"sel",opts:()=>["Check both (worst case)","pos 0.2 (pressure inside)","neg 0.3 (suction inside)"],show:i=>!/^Yes/.test(i.dom),h:"<b>Same choice as cell B51 in your workbook.</b> Without a dominant opening the inside of the building is +0.2 (pressure) or −0.3 (suction). The app default checks both and reports the worst, which is the safe way to design."},
+  {id:"face",l:"Face with the opening",type:"sel",opts:()=>["Windward wall","Leeward wall","Side wall"],show:i=>/^Yes/.test(i.dom),h:"<b>Which wall holds the dominant opening.</b> Windward gives positive internal pressure (more roof uplift); leeward or side gives internal suction."},
+  {id:"ratio",l:"Opening size compared with the others",type:"sel",opts:()=>["2 times or more","3 times or more"],show:i=>/^Yes/.test(i.dom),h:"<b>How much bigger the opening is.</b> 2× the rest: cpi = 0.75 × cpe. 3× the rest: cpi = 0.90 × cpe."}]},
+ {t:"Partial factor",f:[
+  {id:"gam",l:"Load factor γ for ULS",type:"num",unit:"",h:"<b>Multiplier that turns characteristic pressure into the ultimate-limit-state design pressure.</b> SANS 10160-1:2019 uses 1.6 for wind (the old 1.3 applied to earlier editions). Serviceability and deflection checks use the unfactored value.",ref:"SANS 10160-1"}]}
+];
+const FIELDS=SECTIONS.flatMap(s=>s.f.map(f=>f.id));
+const DEFAULTS={cust:"",addr:"",ref:"",date:"",contact:"",cell:"",email:"",cpiSel:"Check both (worst case)",prov:"Gauteng",muni:"City of Johannesburg (Johannesburg)",asrc:"Municipality typical altitude",acus:"1750",T:"50",terr:"B",h:"6",b:"20",d:"12",topo:"No - flat or gently undulating",co:"1.2",roof:"Flat",pitch:"15",hp:"0",dom:"No - openings evenly spread",face:"Windward wall",ratio:"2 times or more",gam:"1.6"};
+/* ===================== helpers ===================== */
+const $=id=>document.getElementById(id);
+const fmt=(v,d=0)=>isFinite(v)?Number(v).toLocaleString("en-ZA",{minimumFractionDigits:d,maximumFractionDigits:d}):"–";
+const kp=v=>(v>0?"+":"")+fmt(v,2).replace(/ /g," ").replace("−","-");
+const cpeTxt=c=>c[0]===c[1]?(c[0]>0?"+":"")+fmt(c[0],2):fmt(c[0],2)+" / "+(c[1]>0?"+":"")+fmt(c[1],2);
+const sgn=v=>(v>0?"+":v<0?"-":"")+fmt(Math.abs(v),2);
+function readInp(){const o={};FIELDS.forEach(f=>{const e=$(f);o[f]=e?e.value:DEFAULTS[f]});return o}
+function save(){try{localStorage.setItem("sanswl",JSON.stringify(readInp()))}catch(e){}}
+function stored(){let d=DEFAULTS;try{const s=localStorage.getItem("sanswl");if(s)d=Object.assign({},DEFAULTS,JSON.parse(s))}catch(e){}d=Object.assign({},d);d.date=new Date().toISOString().slice(0,10);return d}
+function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
+/* ===================== build input page ===================== */
+function build(vals){
+  const p=$("p1");p.innerHTML="";
+  SECTIONS.forEach(s=>{const card=document.createElement("div");card.className="card";const h=document.createElement("h2");h.textContent=s.t;card.appendChild(h);
+    s.f.forEach(f=>{const wrap=document.createElement("div");wrap.className="field";wrap.id="w_"+f.id;
+      const ctl=document.createElement("div");ctl.className="ctl";const lab=document.createElement("label");lab.htmlFor=f.id;lab.textContent=f.l;ctl.appendChild(lab);
+      let el;
+      if(f.type==="sel"){el=document.createElement("select");}
+      else if(f.type==="area"){el=document.createElement("textarea");el.placeholder=f.ph||""}
+      else{el=document.createElement("input");el.type=f.type==="num"?"number":(f.type==="date"||f.type==="tel"||f.type==="email")?f.type:"text";if(f.type==="num"){el.inputMode="decimal";el.step="any";el.min="0"}el.placeholder=f.ph||""}
+      el.id=f.id;
+      if(f.type==="num"&&f.unit){const u=document.createElement("div");u.className="unit";u.appendChild(el);const sp=document.createElement("span");sp.textContent=f.unit;u.appendChild(sp);ctl.appendChild(u)}else ctl.appendChild(el);
+      wrap.appendChild(ctl);
+      const help=document.createElement("div");help.className="help";help.innerHTML=f.h+(f.ref?'<span class="ref">'+f.ref+'</span>':"");wrap.appendChild(help);
+      card.appendChild(wrap)});
+    p.appendChild(card)});
+  fill(vals);
+}
+function fillOpts(f,cur){const el=$(f.id);const o=f.opts(readNow());const keep=cur!==undefined?cur:el.value;el.innerHTML="";o.forEach(k=>{const op=document.createElement("option");op.value=k;op.textContent=f.lab?f.lab(k):k;el.appendChild(op)});el.value=o.includes(keep)?keep:o[0]}
+function readNow(){const o={};FIELDS.forEach(f=>{const e=$(f);o[f]=e?e.value:DEFAULTS[f]});return o}
+function fill(vals){
+  FIELDS.forEach(id=>{const f=SECTIONS.flatMap(s=>s.f).find(x=>x.id===id);if(f.type!=="sel"){$(id).value=vals[id]}});
+  const sels=SECTIONS.flatMap(s=>s.f).filter(f=>f.type==="sel");
+  // order matters: province before municipality
+  sels.forEach(f=>{const el=$(f.id);el.value="";});
+  sels.forEach(f=>{fillOpts(f,vals[f.id])});
+  sync();
+}
+function sync(){
+  const all=SECTIONS.flatMap(s=>s.f);const cur=readNow();
+  all.forEach(f=>{const w=$("w_"+f.id);if(f.show)w.hidden=!f.show(cur)});
+}
+/* ===================== chart ===================== */
+function themeCols(){const cs=getComputedStyle(document.documentElement);const g=n=>cs.getPropertyValue(n).trim();return {card:g("--card"),ink:g("--ink"),muted:g("--muted"),grid:g("--grid"),accent:g("--accent"),ok:g("--brand")}}
+function drawChart(ctx,W,Ht,r,col,s,X=0,Y=0){
+  const fs=n=>Math.round(n*s)+"px system-ui,Arial,sans-serif";
+  ctx.save();ctx.fillStyle=col.card;ctx.fillRect(X,Y,W,Ht);
+  const rows=[...r.W,...r.R];const L=118*s,Rm=20*s,T=30*s,B=44*s;
+  const px=X+L,pw=W-L-Rm,py=Y+T,ph=Ht-T-B;
+  let mn=Math.min(0,...rows.map(x=>x.lo)),mx=Math.max(0,...rows.map(x=>x.hi));const pad=Math.max(.2,(mx-mn)*.06);mn-=pad;mx+=pad;
+  const sx=v=>px+(v-mn)/(mx-mn)*pw;
+  ctx.font="bold "+fs(12);ctx.fillStyle=col.ink;ctx.textAlign="left";ctx.textBaseline="top";ctx.fillText("Net pressure by zone (kPa)  -  suction left, pressure right",X+10*s,Y+8*s);
+  const step=(function(){const raw=(mx-mn)/6,p=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/p;return (f<=1?1:f<=2?2:f<=5?5:10)*p})();
+  ctx.font=fs(11);ctx.textAlign="center";ctx.textBaseline="top";ctx.lineWidth=1*s;
+  for(let v=Math.ceil(mn/step)*step;v<=mx;v+=step){const x=sx(v);ctx.strokeStyle=col.grid;ctx.beginPath();ctx.moveTo(x,py);ctx.lineTo(x,py+ph);ctx.stroke();ctx.fillStyle=col.muted;ctx.fillText((+v.toFixed(2)).toString(),x,py+ph+6*s)}
+  const rh=ph/rows.length;
+  rows.forEach((x,i)=>{const y=py+i*rh,bh=rh*.5,yy=y+(rh-bh)/2;
+    ctx.fillStyle=col.ink;ctx.textAlign="right";ctx.textBaseline="middle";ctx.font=(x.grp==="Walls"?"":"")+fs(11);ctx.fillText((x.grp==="Walls"?"Wall ":"Roof ")+x.z,px-8*s,y+rh/2);
+    if(x.lo<0){ctx.fillStyle=col.accent;ctx.fillRect(sx(Math.min(0,x.lo)),yy,sx(Math.min(0,x.hi))-sx(Math.min(0,x.lo))>0?sx(0)-sx(x.lo):sx(0)-sx(x.lo),bh)}
+    if(x.hi>0){ctx.fillStyle=col.ok;ctx.fillRect(sx(0),yy,sx(x.hi)-sx(0),bh)}
+    ctx.font=fs(10);ctx.fillStyle=col.muted;
+    if(x.lo<0){ctx.textAlign="right";ctx.fillText(fmt(x.lo,2),sx(x.lo)-4*s,y+rh/2)}
+    if(x.hi>0){ctx.textAlign="left";ctx.fillText(fmt(x.hi,2),sx(x.hi)+4*s,y+rh/2)}
+  });
+  ctx.strokeStyle=col.ink;ctx.lineWidth=1.5*s;ctx.beginPath();ctx.moveTo(sx(0),py);ctx.lineTo(sx(0),py+ph);ctx.stroke();
+  ctx.restore();
+}
+/* ===================== A4 report ===================== */
+function wrapT(ctx,text,maxW){const out=[];String(text).split(/\n/).forEach(par=>{let line="";par.split(/\s+/).forEach(w=>{const t=line?line+" "+w:w;if(ctx.measureText(t).width>maxW&&line){out.push(line);line=w}else line=t});out.push(line)});return out}
+const FONT="system-ui,Arial,sans-serif";
+const dateTxt=s=>{const d=s?new Date(s+"T00:00:00"):new Date();return isFinite(d)?d.toLocaleDateString("en-ZA",{day:"2-digit",month:"long",year:"numeric"}):""};
+function buildReport(inp,r){
+  const cv=document.createElement("canvas");cv.width=1654;cv.height=2339;const c=cv.getContext("2d");const M=88,Wd=cv.width-2*M;
+  c.fillStyle="#fff";c.fillRect(0,0,cv.width,cv.height);
+  c.fillStyle="#17364D";c.fillRect(0,0,cv.width,150);
+  c.fillStyle="#fff";c.textBaseline="alphabetic";c.textAlign="left";c.font="bold 52px "+FONT;c.fillText("SANS Windload",M,78);
+  c.font="26px "+FONT;c.fillStyle="#C9D8E4";c.fillText("Wind action summary · SANS 10160-3",M,118);
+  c.textAlign="right";c.fillStyle="#fff";c.font="bold 28px "+FONT;c.fillText(dateTxt(inp.date),cv.width-M,78);
+  let y=200;c.textAlign="left";
+  const lab=(t,x,yy)=>{c.fillStyle="#586875";c.font="bold 20px "+FONT;c.fillText(t,x,yy)};
+  lab("CUSTOMER",M,y);c.fillStyle="#14212B";c.font="bold 40px "+FONT;c.fillText((inp.cust||"-").slice(0,40),M,y+46);
+  lab("SITE ADDRESS",M,y+88);c.font="28px "+FONT;c.fillStyle="#2B3A45";const al=wrapT(c,inp.addr||"Address not entered",Wd-420).slice(0,2);al.forEach((l,i)=>c.fillText(l,M,y+124+i*36));
+  {const ct=[inp.contact,inp.cell,inp.email].filter(Boolean).join("  ·  ");if(ct){c.font="23px "+FONT;c.fillStyle="#586875";c.fillText("Contact: "+ct.slice(0,90),M,y+124+al.length*36+4)}}
+  const rx=cv.width-M-380;lab("JOB / SITE REFERENCE",rx,y);c.font="26px "+FONT;c.fillStyle="#14212B";wrapT(c,inp.ref||"-",380).slice(0,2).forEach((l,i)=>c.fillText(l,rx,y+40+i*34));
+  y+=240;
+  if(!r.valid){c.fillStyle="#B3261E";c.font="bold 36px "+FONT;c.fillText("Inputs incomplete - no results",M,y+40);return cv}
+  // wind basis box
+  lab("WIND BASIS USED",M,y);y+=14;
+  const loc=(r.m?r.m.m:"Custom")+(r.m?", "+r.m.p:"");
+  const basis=[["Location",loc],["Altitude used",fmt(r.alt)+" m ("+(r.asrc==="Custom altitude"?"entered":"municipality value")+")"],
+   ["Fundamental wind speed vb,0",fmt(r.vb0,0)+" m/s (table, cell B8)"],["Return period / cprob",fmt(r.T)+" yr / "+fmt(r.cprob,3)],
+   ["Basic wind speed vb",fmt(r.vb,1)+" m/s"],["Terrain category",r.terrName],
+   ["Topography factor co",r.topo],["Roughness cr(z) at h",fmt(r.cr,3)],
+   ["Peak wind speed vp",fmt(r.vp,1)+" m/s"],["Air density ρ",fmt(r.rho,2)+" kg/m³"]];
+  const cw=Wd/2;
+  basis.forEach((it,i)=>{const col=i%2,row=Math.floor(i/2),x=M+col*cw,yy=y+row*46+34;c.font="24px "+FONT;c.fillStyle="#586875";c.textAlign="left";c.fillText(it[0],x,yy);c.fillStyle="#14212B";c.font="bold 25px "+FONT;c.textAlign="right";
+    let t=it[1];while(c.measureText(t).width>cw-300&&t.length>6)t=t.slice(0,-2);if(t!==it[1])t=t.trim()+"…";c.fillText(t,x+cw-34,yy);c.textAlign="left";c.strokeStyle="#D5DCE2";c.lineWidth=2;c.beginPath();c.moveTo(x,yy+12);c.lineTo(x+cw-34,yy+12);c.stroke()});
+  y+=Math.ceil(basis.length/2)*46+48;
+  // headline pressures
+  const ph=150;c.fillStyle="#E1F3E8";c.fillRect(M,y,Wd,ph);c.fillStyle="#1B7F4B";c.fillRect(M,y,12,ph);
+  c.textAlign="left";c.font="bold 20px "+FONT;c.fillText("PEAK WIND PRESSURE qp(z)  -  characteristic (deflection / SLS)",M+34,y+40);
+  c.font="bold 20px "+FONT;c.fillText("ULTIMATE DESIGN PRESSURE  qp × γ ("+fmt(r.g,2)+")  -  strength / ULS",M+Wd/2+10,y+40);
+  c.font="bold 66px "+FONT;c.fillText(fmt(r.qpPa)+" Pa",M+34,y+112);c.fillText(fmt(r.uls)+" Pa",M+Wd/2+10,y+112);
+  c.font="24px "+FONT;c.fillStyle="#14212B";c.textAlign="right";c.fillText("= "+fmt(r.q,3)+" kPa",M+Wd/2-30,y+112);c.fillText("= "+fmt(r.uls/1000,3)+" kPa",M+Wd-24,y+112);c.textAlign="left";
+  y+=ph+38;
+  // building line
+  lab("BUILDING",M,y);c.font="25px "+FONT;c.fillStyle="#14212B";
+  const bl="h "+fmt(r.h,1)+" m × b "+fmt(r.b,1)+" m × d "+fmt(r.d,1)+" m   ·   "+r.roofName+"   ·   "+(r.domOn?"dominant opening, cpi "+fmt(r.cpiHi,2):"cpi +0.2 / -0.3");
+  c.fillText(bl,M+170,y);y+=40;
+  // design values
+  lab("DESIGN VALUES (net of internal pressure)",M,y);y+=12;
+  const cols=[M,M+600,M+850,M+1100];
+  c.font="bold 20px "+FONT;c.fillStyle="#586875";["Check","Characteristic","ULS (×γ)","Use for"].forEach((h,i)=>{c.textAlign=i===1||i===2?"right":"left";c.fillText(h,i===1?cols[1]+170:i===2?cols[2]+170:cols[i],y+30)});c.textAlign="left";
+  c.strokeStyle="#14212B";c.lineWidth=2;c.beginPath();c.moveTo(M,y+42);c.lineTo(cv.width-M,y+42);c.stroke();
+  r.designs.forEach((d,i)=>{const yy=y+42+(i+1)*44-10;c.font="bold 25px "+FONT;c.fillStyle="#14212B";c.fillText(d[0],cols[0],yy);
+    c.textAlign="right";c.fillStyle=d[1]<0?"#B3261E":"#1B7F4B";c.fillText(sgn(d[1])+" kPa",cols[1]+170,yy);c.fillText(sgn(d[1]*r.g)+" kPa",cols[2]+170,yy);c.textAlign="left";
+    c.font="20px "+FONT;c.fillStyle="#586875";const ut=d[2];c.fillText(ut.length>34?ut.slice(0,32)+"…":ut,cols[3],yy)});
+  y+=42+r.designs.length*44+34;
+  // zone table
+  lab("PRESSURES BY ZONE (kPa, characteristic; ULS = × "+fmt(r.g,2)+")",M,y);y+=12;
+  const zc=[M,M+120,M+700,M+920,M+1160];
+  c.font="bold 20px "+FONT;c.fillStyle="#586875";["Zone","Description","cpe,10","Max suction","Max pressure"].forEach((h,i)=>{c.textAlign=i>=2?"right":"left";c.fillText(h,i>=2?zc[i]+(i===2?150:200):zc[i],y+30)});c.textAlign="left";
+  c.strokeStyle="#14212B";c.beginPath();c.moveTo(M,y+42);c.lineTo(cv.width-M,y+42);c.stroke();
+  const rows=[...r.W.map(x=>({...x,zz:"Wall "+x.z})),...r.R.map(x=>({...x,zz:"Roof "+x.z}))];
+  const rowH=Math.min(40,Math.floor((2339-170-(y+42)-60)/rows.length));
+  rows.forEach((x,i)=>{const yy=y+42+(i+1)*rowH-9;c.font="bold 23px "+FONT;c.fillStyle="#14212B";c.fillText(x.zz,zc[0],yy);c.font="22px "+FONT;c.fillStyle="#2B3A45";c.fillText(x.n,zc[1],yy);
+    c.textAlign="right";c.fillStyle="#14212B";c.fillText(cpeTxt(x.cpe),zc[2]+150,yy);c.fillStyle=x.lo<0?"#B3261E":"#1B7F4B";c.fillText(sgn(x.lo),zc[3]+200,yy);c.fillStyle=x.hi<0?"#B3261E":"#1B7F4B";c.fillText(sgn(x.hi),zc[4]+200,yy);c.textAlign="left";
+    c.strokeStyle="#E3E8EC";c.lineWidth=1.5;c.beginPath();c.moveTo(M,yy+10);c.lineTo(cv.width-M,yy+10);c.stroke()});
+  const cy=y+42+rows.length*rowH+30,chH=2339-150-20-cy;
+  if(chH>380){drawChart(c,Wd,Math.min(chH,620),r,{card:"#FFFFFF",ink:"#14212B",muted:"#586875",grid:"#E3E8EC",accent:"#B3261E",ok:"#17364D"},1.6,M,cy)}
+  // footer
+  const fy=2339-150;c.strokeStyle="#D5DCE2";c.lineWidth=2;c.beginPath();c.moveTo(M,fy);c.lineTo(cv.width-M,fy);c.stroke();
+  c.fillStyle="#586875";c.font="18px "+FONT;
+  const note="Preliminary wind-action estimate to SANS 10160-3, for wind across the ridge (0°). Negative = suction. Local cpe,1 areas, other wind directions and dynamic effects are not included. Final design must be verified by a registered Professional Engineer. "+(r.flags.length>1?"Notes: "+r.flags.slice(0,-1).join(" "):"");
+  wrapT(c,note,Wd).slice(0,4).forEach((l,i)=>c.fillText(l,M,fy+30+i*25));
+  return cv;
+}
+function pdfFromCanvas(pages){
+  const enc=s=>new TextEncoder().encode(s);const parts=[];let off=0;const offs=[];
+  const push=b=>{parts.push(b);off+=b.length};const N=pages.length;
+  push(enc("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n"));
+  const obj=(i,body)=>{offs[i]=off;push(enc(i+" 0 obj\n"+body+"\nendobj\n"))};
+  obj(1,"<< /Type /Catalog /Pages 2 0 R >>");
+  obj(2,"<< /Type /Pages /Kids ["+pages.map((_,k)=>(3+3*k)+" 0 R").join(" ")+"] /Count "+N+" >>");
+  pages.forEach((cv,k)=>{
+    const jpg=atob(cv.toDataURL("image/jpeg",0.92).split(",")[1]);const n=jpg.length;const img=new Uint8Array(n);for(let q=0;q<n;q++)img[q]=jpg.charCodeAt(q);
+    const pi=3+3*k,ii=4+3*k,ci=5+3*k;
+    obj(pi,"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 "+ii+" 0 R >> >> /Contents "+ci+" 0 R >>");
+    offs[ii]=off;push(enc(ii+" 0 obj\n<< /Type /XObject /Subtype /Image /Width "+cv.width+" /Height "+cv.height+" /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "+n+" >>\nstream\n"));push(img);push(enc("\nendstream\nendobj\n"));
+    const cs="q 595.28 0 0 841.89 0 0 cm /Im0 Do Q";obj(ci,"<< /Length "+cs.length+" >>\nstream\n"+cs+"\nendstream");
+  });
+  const T=3+3*N;const xr=off;let x="xref\n0 "+T+"\n0000000000 65535 f \n";for(let i=1;i<T;i++)x+=String(offs[i]).padStart(10,"0")+" 00000 n \n";
+  push(enc(x+"trailer\n<< /Size "+T+" /Root 1 0 R >>\nstartxref\n"+xr+"\n%%EOF"));
+  return new Blob(parts,{type:"application/pdf"});
+}
+
+/* ===================== step-by-step working (school-test layout) ===================== */
+const n2=(v,d)=>(+v).toFixed(d);
+const sg=(v,d=2)=>(v<0?"-":"")+Math.abs(v).toFixed(d);
+const br=v=>v<0?"("+sg(v)+")":sg(v);
+function buildWork(inp,r){
+  const pages=[];let cv,c,y;const M=88,Wd=1654-2*M,LIM=2339-130;
+  const np=()=>{cv=document.createElement("canvas");cv.width=1654;cv.height=2339;c=cv.getContext("2d");c.fillStyle="#fff";c.fillRect(0,0,1654,2339);
+    c.fillStyle="#17364D";c.fillRect(0,0,1654,104);c.fillStyle="#fff";c.textAlign="left";c.textBaseline="alphabetic";c.font="bold 40px "+FONT;c.fillText("SANS Windload - Step-by-step working",M,66);
+    c.font="23px "+FONT;c.textAlign="right";c.fillStyle="#C9D8E4";c.fillText(((inp.cust||"-")+"  ·  "+(r.m?r.m.m:"")).slice(0,70),1654-M,66);c.textAlign="left";y=150;pages.push(cv)};
+  np();
+  const need=h=>{if(y+h>LIM)np()};
+  const step=(n,title)=>{need(140);c.fillStyle="#E8EEF3";c.fillRect(M,y,Wd,48);c.fillStyle="#17364D";c.fillRect(M,y,10,48);c.font="bold 27px "+FONT;c.textAlign="left";c.fillText("Step "+n+"   "+title,M+26,y+33);y+=48+38};
+  const line=(txt,o={})=>{c.font=(o.b?"bold ":"")+(o.s||24)+"px "+FONT;const lines=wrapT(c,txt,Wd-(o.ind||0)-20);need(lines.length*34+6);c.fillStyle=o.col||"#14212B";c.textAlign="left";lines.forEach(l=>{c.fillText(l,M+20+(o.ind||0),y);y+=34});};
+  const lab=(l,txt,o={})=>{need(40);c.font="bold 21px "+FONT;c.fillStyle="#586875";c.fillText(l,M+20,y);c.font="24px "+FONT;c.fillStyle="#14212B";const ind=150;const lines=wrapT(c,txt,Wd-ind-30);lines.forEach((ln,i)=>{c.fillStyle=o.col||"#14212B";c.font=(o.b?"bold ":"")+"24px "+FONT;c.fillText(ln,M+20+ind,y);if(i<lines.length-1){y+=34;need(40)}});y+=36};
+  const ans=txt=>{need(60);c.font="bold 27px "+FONT;const w=Math.min(Wd-40,c.measureText(txt).width+44);c.fillStyle="#E1F3E8";c.fillRect(M+20,y-30,w,46);c.fillStyle="#1B7F4B";c.fillRect(M+20,y-30,8,46);c.fillText(txt,M+40,y+4);y+=44};
+  const gap=g=>{y+=g};
+  if(!r.valid){line("Inputs incomplete.");return pages}
+  const T=TERR[r.terr],z=Math.max(r.h,T.zc);
+  /* 1 */ step(1,"Wind speed for the site");
+  lab("Given","Province: "+(r.m?r.m.p:"-")+".  Municipality: "+(r.m?r.m.m:"-")+".");
+  lab("From table","Looked up in the wind speed table (workbook cell B8).");
+  ans("vb,0 = "+n2(r.vb0,0)+" m/s");gap(8);
+  /* 2 */ step(2,"Return period and basic wind speed vb");
+  const p=1/r.T,numr=1-.2*Math.log(-Math.log(1-p)),den=1-.2*Math.log(-Math.log(.98));
+  lab("Formula","cprob = [ (1 - K·ln(-ln(1-p))) ÷ (1 - K·ln(-ln 0.98)) ]^n     with K = 0.2, n = 0.5, p = 1 ÷ T;     vb = cprob × vb,0");
+  lab("Working",r.T===50?"T = 50 years, so p = 0.02 and the top and bottom of the fraction are equal:  cprob = 1.000":"T = "+n2(r.T,0)+" years;  p = 1 ÷ "+n2(r.T,0)+" = "+n2(p,4)+";  top = 1 - 0.2×ln(-ln(1-"+n2(p,4)+")) = "+n2(numr,4)+";  bottom = "+n2(den,4)+";  cprob = ("+n2(numr,4)+" ÷ "+n2(den,4)+")^0.5 = "+n2(r.cprob,3));
+  lab("Substitute","vb = "+n2(r.cprob,3)+" × "+n2(r.vb0,0)+" = "+n2(r.cprob*r.vb0,2)+" m/s   (rounded)");
+  ans("vb = "+n2(r.vb,1)+" m/s   (workbook cell B11)");gap(8);
+  /* 3 */ step(3,"Terrain category");
+  lab("Given","Category "+r.terrName+".");
+  lab("From Table 1","zg = "+T.zg+" m,   z0 = "+T.z0+" m,   zc = "+T.zc+" m,   α = "+T.al);gap(8);
+  /* 4 */ step(4,"Roughness factor cr(z)");
+  const ratio=(z-T.z0)/(T.zg-T.z0);
+  lab("Formula","cr(z) = 1.36 × [ (z - z0) ÷ (zg - z0) ]^α,   where z = the larger of h and zc");
+  lab("Working","z = max("+n2(r.h,1)+", "+T.zc+") = "+n2(z,1)+" m;   ratio = ("+n2(z,1)+" - "+T.z0+") ÷ ("+T.zg+" - "+T.z0+") = "+n2(ratio,4)+";   ratio^"+T.al+" = "+n2(Math.pow(ratio,T.al),4));
+  lab("Substitute","cr = 1.36 × "+n2(Math.pow(ratio,T.al),4)+" = "+n2(1.36*Math.pow(ratio,T.al),4));
+  ans("cr(z) = "+n2(r.cr,3));gap(8);
+  /* 5 */ step(5,"Topography factor co");
+  lab("Given",r.co>1?"Hill, ridge or escarpment: co = "+n2(r.co,1):"Flat or gently undulating site: co = 1.0");
+  ans("co = "+n2(r.co,1));gap(8);
+  /* 6 */ step(6,"Peak wind speed vp(z)");
+  lab("Formula","vp(z) = cr(z) × co × vb");
+  lab("Substitute","vp = "+n2(r.cr,3)+" × "+n2(r.co,1)+" × "+n2(r.vb,1)+" = "+n2(r.cr*r.co*r.vb,2));
+  ans("vp = "+n2(r.vp,1)+" m/s");gap(8);
+  /* 7 */ step(7,"Altitude and air density ρ");
+  const base=1-.0000226*r.alt;
+  lab("Given","Site altitude = "+n2(r.alt,0)+" m ("+(r.asrc==="Custom altitude"?"entered by you":"municipality table")+").");
+  lab("Formula","ρ = 1.2 × (1 - 0.0000226 × altitude)^5.256");
+  lab("Working","1 - 0.0000226 × "+n2(r.alt,0)+" = "+n2(base,5)+";   "+n2(base,5)+"^5.256 = "+n2(Math.pow(base,5.256),5)+";   ρ = 1.2 × "+n2(Math.pow(base,5.256),5)+" = "+n2(1.2*Math.pow(base,5.256),4));
+  ans("ρ = "+n2(r.rho,2)+" kg/m³");gap(8);
+  /* 8 */ step(8,"Peak wind pressure qp(z)");
+  lab("Formula","qp = ½ × ρ × vp²");
+  lab("Substitute","qp = 0.5 × "+n2(r.rho,2)+" × "+n2(r.vp,1)+"² = 0.5 × "+n2(r.rho,2)+" × "+n2(r.vp*r.vp,2)+" = "+n2(.5*r.rho*r.vp*r.vp,1)+" Pa");
+  ans("qp = "+n2(r.qpPa,0)+" Pa = "+n2(r.q,3)+" kPa   (use for deflection / SLS)");gap(8);
+  /* 9 */ step(9,"Ultimate (factored) design pressure");
+  lab("Formula","ULS pressure = qp × γ     (γ = "+n2(r.g,2)+" for wind, SANS 10160-1)");
+  lab("Substitute",n2(r.qpPa,0)+" × "+n2(r.g,2)+" = "+n2(r.qpPa*r.g,0)+" Pa");
+  ans("ULS pressure = "+n2(r.uls,0)+" Pa = "+n2(r.uls/1000,3)+" kPa   (use for strength)");gap(8);
+  /* 10 */ step(10,"Building shape");
+  lab("Given","h = "+n2(r.h,1)+" m,   b = "+n2(r.b,1)+" m,   d = "+n2(r.d,1)+" m");
+  lab("Working","e = smaller of b and 2h = min("+n2(r.b,1)+", "+n2(2*r.h,1)+") = "+n2(r.e,1)+" m;     h ÷ d = "+n2(r.h,1)+" ÷ "+n2(r.d,1)+" = "+n2(r.hd,3));
+  line("Side-wall zones: A is the first e ÷ 5 = "+n2(r.e/5,1)+" m from the windward corner"+(r.d>r.e/5?"; B is the next "+n2(Math.min(r.d,r.e)-r.e/5,1)+" m":"; B does not exist because d ≤ e ÷ 5")+(r.d>r.e?"; C is the remaining "+n2(r.d-r.e,1)+" m.":"; C does not exist because d is not more than e."),{col:"#586875",s:22,ind:150});gap(8);
+  /* 11 */ step(11,"Wall pressure coefficients cpe,10 (Table 6)");
+  const hd=r.hd;
+  lab("Zone D",hd>=1?"h ÷ d = "+n2(hd,3)+" ≥ 1, so cpe = +0.8":hd<=.25?"h ÷ d ≤ 0.25, so cpe = +0.7":"h ÷ d between 0.25 and 1:  cpe = 0.7 + 0.1 × ("+n2(hd,3)+" - 0.25) ÷ 0.75 = "+sg(r.cD,3));
+  lab("Zone E",hd>=5?"h ÷ d ≥ 5, so cpe = -0.7":hd>=1?"h ÷ d between 1 and 5:  cpe = -0.5 - 0.2 × ("+n2(hd,3)+" - 1) ÷ 4 = "+sg(r.cE,3):hd<=.25?"h ÷ d ≤ 0.25, so cpe = -0.3":"h ÷ d between 0.25 and 1:  cpe = -0.3 - 0.2 × ("+n2(hd,3)+" - 0.25) ÷ 0.75 = "+sg(r.cE,3));
+  lab("Zones A, B, C","A = -1.2,   B = -0.8,   C = -0.5   (fixed values from the table)");gap(8);
+  /* 12 */ step(12,"Roof pressure coefficients cpe,10 — "+r.roofName);
+  const pit=+inp.pitch;
+  if(r.roofName.startsWith("Flat")){lab("From table","Flat-roof table (Table 7)"+(/parapet/.test(r.roofName)?", parapet ratio chosen.":", sharp eaves."))}
+  else{const tab=/^Mono/.test(inp.roof)?MONO:DUO;let lo=tab[0],hi=tab[0];for(let k=0;k<tab.length-1;k++)if(pit>=tab[k][0]&&pit<=tab[k+1][0]){lo=tab[k];hi=tab[k+1]}
+    if(pit===lo[0]||pit===hi[0]||pit<=tab[0][0]||pit>=tab[tab.length-1][0])lab("From table","Pitch "+n2(pit,0)+"° read straight from the table row.");
+    else{const f=lo[1].F,g=hi[1].F;lab("Interpolate","Pitch "+n2(pit,0)+"° lies between the "+lo[0]+"° and "+hi[0]+"° rows. Example, zone F lowest value: "+sg(f[0],2)+" + ("+n2(pit,0)+" - "+lo[0]+") ÷ ("+hi[0]+" - "+lo[0]+") × ("+br(g[0])+" - "+br(f[0])+") = "+sg(f[0]+(pit-lo[0])/(hi[0]-lo[0])*(g[0]-f[0]),2)+"; all zones treated the same way.")}}
+  r.R.forEach(x=>lab("Zone "+x.z,(x.cpe[0]===x.cpe[1]?"cpe = "+sg(x.cpe[0],2):"cpe from "+sg(x.cpe[0],2)+" to "+sg(x.cpe[1],2))+"   ("+x.n+")"));gap(8);
+  /* 13 */ step(13,"Internal pressure coefficient cpi");
+  if(r.domOn)lab("Dominant opening","cpi = "+(/3/.test(inp.ratio)?"0.90":"0.75")+" × cpe of the face with the opening ("+inp.face+") = "+sg(r.cpiHi,3));
+  else lab("Given",r.cpiHi===r.cpiLo?"One case chosen: cpi = "+sg(r.cpiHi,1):"No dominant opening. Both cases are checked: cpi = +0.2 (pressure inside) and cpi = -0.3 (suction inside).");gap(8);
+  /* 14 */ step(14,"Net pressure on each zone");
+  line("Formula:  w = qp × (cpe - cpi)  in kPa,  qp = "+n2(r.q,3)+" kPa.   Suction (negative) uses the lowest cpe with the highest cpi; pressure (positive) uses the highest cpe with the lowest cpi.",{col:"#586875",s:22});gap(6);
+  [...r.W,...r.R].forEach(x=>{const nm=(x.grp==="Walls"?"Wall ":"Roof ")+x.z;
+    lab(nm,"suction:   "+n2(r.q,3)+" × ("+br(x.cpe[0])+" - "+br(r.cpiHi)+") = "+sg(x.lo,3)+" kPa");lab("","pressure:  "+n2(r.q,3)+" × ("+br(x.cpe[1])+" - "+br(r.cpiLo)+") = "+sg(x.hi,3)+" kPa")});gap(8);
+  /* 15 */ step(15,"Design values chosen");
+  line("Pick the largest suction and the largest pressure from step 14, then multiply by γ = "+n2(r.g,2)+" for the ultimate value.",{col:"#586875",s:22});gap(6);
+  r.designs.forEach(d=>{line(d[0]+":   "+sg(d[1],3)+" kPa × "+n2(r.g,2)+" = "+sg(d[1]*r.g,3)+" kPa ULS",{b:true,s:24});gap(4)});
+  gap(10);ans("FINAL:  qp = "+n2(r.qpPa,0)+" Pa   ·   ULS = "+n2(r.uls,0)+" Pa   ·   vp = "+n2(r.vp,1)+" m/s   ·   altitude = "+n2(r.alt,0)+" m");
+  return pages;
+}
+function allPages(inp,r){const p=[buildReport(inp,r)].concat(r.valid?buildWork(inp,r):[]);
+  p.forEach((cv,i)=>{const c=cv.getContext("2d");c.fillStyle="#586875";c.font="19px "+FONT;c.textAlign="right";c.textBaseline="alphabetic";c.fillText("SANS Windload v"+VERSION+" · Page "+(i+1)+" of "+p.length,cv.width-88,2339-30)});return p}
+/* ===================== UI ===================== */
+let cur=null,pdfBlob=null;
+function show(n){$("p1").hidden=n!==1;$("p2").hidden=n!==2;$("tab1").setAttribute("aria-selected",n===1);$("tab2").setAttribute("aria-selected",n===2);bar(n);window.scrollTo(0,0);if(n===2)render()}
+function bar(n){const b=$("bar");b.innerHTML="";
+  const add=(t,cls,fn)=>{const x=document.createElement("button");x.className="btn "+cls;x.textContent=t;x.onclick=fn;b.appendChild(x)};
+  if(n===1){add("Reset","",()=>{fill(Object.assign({},DEFAULTS,{date:new Date().toISOString().slice(0,10)}));save()});add("Calculate","primary wide",()=>{save();show(2)})}
+  else{add("Back to inputs","",()=>show(1));add("Share PDF","primary wide",sharePdf)}}
+function render(){
+  const inp=readInp();const r=calc(inp);cur={inp,r};
+  const res=$("res");
+  if(!r.valid){res.className="result bad";res.innerHTML="";const l=document.createElement("div");l.className="lab";l.textContent="Check inputs";const p=document.createElement("p");p.textContent=r.flags[0];res.append(l,p);
+    $("basis").innerHTML="";$("flags").innerHTML="";$("tb").innerHTML="";pdfBlob=null;$("previews").innerHTML="";const c=$("chart").getContext("2d");c.clearRect(0,0,9999,9999);return}
+  res.className="result ok";
+  res.innerHTML='<div class="pair"><div><div class="lab">Peak wind pressure qp (characteristic)</div><div class="big" id="r1"></div></div><div><div class="lab">Design pressure ULS (qp × γ)</div><div class="big" id="r2"></div></div></div><p id="r3"></p>';
+  $("r1").textContent=fmt(r.qpPa)+" Pa";$("r2").textContent=fmt(r.uls)+" Pa";$("r3").textContent="Wind speed vp "+fmt(r.vp,1)+" m/s · altitude "+fmt(r.alt)+" m · vb,0 "+fmt(r.vb0)+" m/s · "+r.cpiNote;
+  const dl=$("basis");dl.innerHTML="";
+  [["Customer",inp.cust||"-"],["Site",inp.addr?inp.addr.replace(/\n/g,", "):"-"],["Location",(r.m?r.m.m+", "+r.m.p:"Custom")],["Altitude",fmt(r.alt)+" m"],["vb,0",fmt(r.vb0)+" m/s"],["vb ("+fmt(r.T)+" yr)",fmt(r.vb,1)+" m/s"],["Terrain",r.terrName],["co · cr(z)",fmt(r.co,2)+" · "+fmt(r.cr,3)],["vp (peak)",fmt(r.vp,1)+" m/s"],["ρ",fmt(r.rho,2)+" kg/m³"],["Roof",r.roofName]].forEach(([a,b])=>{const t=document.createElement("dt");t.textContent=a;const d=document.createElement("dd");d.textContent=b;dl.append(t,d)});
+  const fl=$("flags");fl.innerHTML="";r.flags.forEach(f=>{const li=document.createElement("li");li.textContent=f;fl.appendChild(li)});
+  const tb=$("tb");tb.innerHTML="";
+  const addRow=(cells,cls)=>{const tr=document.createElement("tr");if(cls)tr.className=cls;cells.forEach((t,i)=>{const td=document.createElement("td");td.textContent=t;if(i>0)td.className="n";tr.appendChild(td)});tb.appendChild(tr)};
+  const grp=t=>{const tr=document.createElement("tr");tr.className="grp";const td=document.createElement("td");td.colSpan=4;td.textContent=t;tr.appendChild(td);tb.appendChild(tr)};
+  grp("Design values");r.designs.forEach(d=>addRow([d[0],"",sgn(d[1]),sgn(d[1]*r.g)+" ULS"],"crit"));
+  grp("Walls");r.W.forEach(x=>addRow([x.z+" "+x.n,cpeTxt(x.cpe),sgn(x.lo),sgn(x.hi)]));
+  grp(r.roofName);r.R.forEach(x=>addRow([x.z+" "+x.n,cpeTxt(x.cpe),sgn(x.lo),sgn(x.hi)]));
+  drawScreen();
+  const pages=allPages(inp,r);const pv=$("previews");pv.innerHTML="";pages.forEach((cv,i)=>{const im=document.createElement("img");im.alt="A4 report page "+(i+1);im.src=cv.toDataURL("image/jpeg",0.8);pv.appendChild(im)});pdfBlob=pdfFromCanvas(pages);
+}
+function drawScreen(){if(!cur||!cur.r.valid)return;const cv=$("chart");const w=cv.parentElement.clientWidth||340;const dpr=Math.min(window.devicePixelRatio||1,3);const n=cur.r.W.length+cur.r.R.length;const h=Math.round(Math.max(300,60+n*26));
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.height=h+"px";const c=cv.getContext("2d");c.setTransform(1,0,0,1,0,0);drawChart(c,cv.width,cv.height,cur.r,themeCols(),dpr*Math.max(.9,Math.min(1.2,w/520)))}
+function fileName(){const n=(cur.inp.cust||"customer").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,30)||"customer";return "SANS_Windload_"+n+"_"+new Date().toISOString().slice(0,10)+".pdf"}
+function summaryText(){const {inp,r}=cur;if(!r.valid)return "SANS Windload - inputs incomplete";return ["SANS Windload - "+(inp.cust||"customer"),inp.addr?inp.addr.replace(/\n/g,", "):"",inp.ref?"Ref: "+inp.ref:"","Location: "+(r.m?r.m.m+", "+r.m.p:"custom")+" · altitude "+fmt(r.alt)+" m · vb,0 "+fmt(r.vb0)+" m/s · vp "+fmt(r.vp,1)+" m/s","qp "+fmt(r.qpPa)+" Pa (characteristic), ULS "+fmt(r.uls)+" Pa (γ "+fmt(r.g,2)+")"].concat(r.designs.map(d=>d[0]+": "+sgn(d[1])+" kPa")).filter(Boolean).join("\n")}
+function download(){const url=URL.createObjectURL(pdfBlob);const a=document.createElement("a");a.href=url;a.download=fileName();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000)}
+async function sharePdf(){if(!cur||!pdfBlob){render()}if(!pdfBlob){toast("Complete the inputs first");return}
+  const file=new File([pdfBlob],fileName(),{type:"application/pdf"});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"SANS Windload report",text:summaryText()});return}}catch(e){if(e&&e.name==="AbortError")return}
+  download();toast("Sharing is not available here, so the PDF was saved instead. Send it from your Downloads.")}
+$("bShare").onclick=sharePdf;
+$("bSave").onclick=()=>{if(!pdfBlob)render();if(pdfBlob){download();toast("PDF saved to Downloads")}};
+$("bMail").onclick=()=>{location.href="mailto:?subject="+encodeURIComponent("SANS Windload - "+(cur.inp.cust||""))+"&body="+encodeURIComponent(summaryText())};
+$("bWa").onclick=()=>{location.href="https://wa.me/?text="+encodeURIComponent(summaryText())};
+$("tab1").onclick=()=>show(1);$("tab2").onclick=()=>{save();show(2)};
+$("p1").addEventListener("input",e=>{sync();save()});
+$("p1").addEventListener("change",e=>{
+  const all=SECTIONS.flatMap(s=>s.f);
+  if(e.target.id==="prov"){fillOpts(all.find(f=>f.id==="muni"))}
+  sync();save()});
+window.addEventListener("resize",()=>{if(!$("p2").hidden)drawScreen()});
+matchMedia("(prefers-color-scheme: dark)").addEventListener&&matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(!$("p2").hidden)drawScreen()});
+build(stored());show(1);
+if("serviceWorker" in navigator&&location.protocol.startsWith("http")){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+window.__calc=calc;window.__munis=MUNIS;window.__readInp=readInp;
+</script>
+</body>
+</html>
