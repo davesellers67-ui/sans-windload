@@ -68,6 +68,9 @@ tr.crit td{font-weight:700}
 .actions .btn{flex:none}
 .note{color:var(--muted);font-size:.8rem;margin:0}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.9rem;max-width:90vw;z-index:9}
+#drw img{width:100%;height:auto;border:1px solid var(--line);border-radius:4px;background:#fff;display:block;margin-bottom:12px}
+.locbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.locbtns .btn{flex:none;min-height:46px;font-size:.92rem}
 #previews img{width:100%;height:auto;border:1px solid var(--line);border-radius:4px;background:#fff;display:block;margin-bottom:12px}
 .sum{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.9rem;margin:0}
 .sum dt{color:var(--muted)}.sum dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;color:var(--ink)}
@@ -86,6 +89,9 @@ tr.crit td{font-weight:700}
 <section class="page" id="p2" aria-labelledby="tab2" hidden>
   <div id="res" class="result"></div>
   <div class="card"><h2>Wind basis used</h2><dl class="sum" id="basis"></dl><ul class="flags" id="flags"></ul></div>
+  <div class="card"><h2>Site location, plan and elevation</h2><div id="drw"></div>
+    <p class="note">Plan and elevation are drawn to scale from the height, breadth, depth and roof entered. Shading shows suction: the darker the red, the stronger the suction. Values are net characteristic kPa.</p>
+  </div>
   <div class="card"><h2>Pressures by zone (kPa, net of internal pressure)</h2>
     <div class="tablewrap"><table><thead><tr><th>Zone</th><th class="n">cpe</th><th class="n">Max suction</th><th class="n">Max pressure</th></tr></thead><tbody id="tb"></tbody></table></div>
     <p class="note">Negative = suction, acting away from the surface. Positive = pressure, acting onto the surface. Characteristic values; the report also gives factored (ULS) values.</p>
@@ -200,6 +206,9 @@ const SECTIONS=[
   {id:"contact",l:"Contact person (optional)",type:"text",ph:"e.g. Wyn Robertson",h:"<b>Who to speak to about this job.</b> Printed on the summary."},
   {id:"cell",l:"Cell number (optional)",type:"tel",ph:"e.g. 082 000 0000",h:"<b>Contact cell number.</b> Printed on the summary."},
   {id:"email",l:"Email address (optional)",type:"email",ph:"name@company.co.za",h:"<b>Contact email.</b> Printed on the summary."}]},
+ {t:"Site position (for the location map)",f:[
+  {id:"lat",l:"Latitude",type:"text",ph:"e.g. -26.10760",h:"<b>GPS position of the building, in decimal degrees.</b> South African latitudes are negative (about -22 to -35). Tap <b>Use my location</b> while standing on site, or <b>Find from address</b> to look up the site address above. Leave blank for no map."},
+  {id:"lon",l:"Longitude",type:"text",ph:"e.g. 28.05670",h:"<b>East-west position in decimal degrees</b> (about 16 to 33 in South Africa). The satellite photo on the results page and report is centred here. To show the photo, the app fetches map images from Esri; Find from address sends the address to OpenStreetMap. Nothing else leaves the phone."}]},
  {t:"Wind speed and altitude",f:[
   {id:"prov",l:"Province",type:"sel",opts:()=>PROVS,h:"<b>Province of the site.</b> Choosing it filters the municipality list below."},
   {id:"muni",l:"Municipality",type:"sel",opts:i=>MUNIS.filter(x=>x.p===i.prov).map(x=>x.m),h:"<b>Municipality where the building stands.</b> Gives the fundamental wind speed vb,0 (workbook cell B8) and a typical altitude, exactly as your Excel lookup does; vb (cell B11) is worked out from it on the report. Pick the municipality the site is in, not the nearest town.",ref:"SANS 10160-3 wind speed table by municipality"},
@@ -225,10 +234,10 @@ const SECTIONS=[
   {id:"face",l:"Face with the opening",type:"sel",opts:()=>["Windward wall","Leeward wall","Side wall"],show:i=>/^Yes/.test(i.dom),h:"<b>Which wall holds the dominant opening.</b> Windward gives positive internal pressure (more roof uplift); leeward or side gives internal suction."},
   {id:"ratio",l:"Opening size compared with the others",type:"sel",opts:()=>["2 times or more","3 times or more"],show:i=>/^Yes/.test(i.dom),h:"<b>How much bigger the opening is.</b> 2× the rest: cpi = 0.75 × cpe. 3× the rest: cpi = 0.90 × cpe."}]},
  {t:"Partial factor",f:[
-  {id:"gam",l:"Load factor γ for ULS",type:"num",unit:"",h:"<b>Multiplier that turns characteristic pressure into the ultimate-limit-state design pressure.</b> SANS 10160-1:2019 uses 1.6 for wind (the old 1.3 applied to earlier editions). Serviceability and deflection checks use the unfactored value.",ref:"SANS 10160-1"}]}
+  {id:"gam",l:"Load factor γ for ULS",type:"num",unit:"",h:"<b>Multiplier that turns characteristic pressure into the ultimate-limit-state design pressure.</b> SANS 10160-1 Table 3 uses 1.3 for wind (1.5 only for slender structures with significant cross-wind response; 1.6 is for imposed floor and roof loads, not wind). Serviceability and deflection checks use the unfactored value.",ref:"SANS 10160-1"}]}
 ];
 const FIELDS=SECTIONS.flatMap(s=>s.f.map(f=>f.id));
-const DEFAULTS={cust:"",addr:"",ref:"",date:"",contact:"",cell:"",email:"",cpiSel:"Check both (worst case)",prov:"Gauteng",muni:"City of Johannesburg (Johannesburg)",asrc:"Municipality typical altitude",acus:"1750",T:"50",terr:"B",h:"6",b:"20",d:"12",topo:"No - flat or gently undulating",co:"1.2",roof:"Flat",pitch:"15",hp:"0",dom:"No - openings evenly spread",face:"Windward wall",ratio:"2 times or more",gam:"1.6"};
+const DEFAULTS={cust:"",addr:"",ref:"",date:"",contact:"",cell:"",email:"",lat:"",lon:"",cpiSel:"Check both (worst case)",prov:"Gauteng",muni:"City of Johannesburg (Johannesburg)",asrc:"Municipality typical altitude",acus:"1750",T:"50",terr:"B",h:"6",b:"20",d:"12",topo:"No - flat or gently undulating",co:"1.2",roof:"Flat",pitch:"15",hp:"0",dom:"No - openings evenly spread",face:"Windward wall",ratio:"2 times or more",gam:"1.3"};
 /* ===================== helpers ===================== */
 const $=id=>document.getElementById(id);
 const fmt=(v,d=0)=>isFinite(v)?Number(v).toLocaleString("en-ZA",{minimumFractionDigits:d,maximumFractionDigits:d}):"–";
@@ -237,7 +246,7 @@ const cpeTxt=c=>c[0]===c[1]?(c[0]>0?"+":"")+fmt(c[0],2):fmt(c[0],2)+" / "+(c[1]>
 const sgn=v=>(v>0?"+":v<0?"-":"")+fmt(Math.abs(v),2);
 function readInp(){const o={};FIELDS.forEach(f=>{const e=$(f);o[f]=e?e.value:DEFAULTS[f]});return o}
 function save(){try{localStorage.setItem("sanswl",JSON.stringify(readInp()))}catch(e){}}
-function stored(){let d=DEFAULTS;try{const s=localStorage.getItem("sanswl");if(s)d=Object.assign({},DEFAULTS,JSON.parse(s))}catch(e){}d=Object.assign({},d);d.date=new Date().toISOString().slice(0,10);return d}
+function stored(){let d=DEFAULTS;try{const s=localStorage.getItem("sanswl");if(s)d=Object.assign({},DEFAULTS,JSON.parse(s))}catch(e){}d=Object.assign({},d);if(String(d.gam).trim()==="1.6")d.gam="1.3";d.date=new Date().toISOString().slice(0,10);return d}
 function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
 /* ===================== build input page ===================== */
 function build(vals){
@@ -255,6 +264,7 @@ function build(vals){
       const help=document.createElement("div");help.className="help";help.innerHTML=f.h+(f.ref?'<span class="ref">'+f.ref+'</span>':"");wrap.appendChild(help);
       card.appendChild(wrap)});
     p.appendChild(card)});
+  addLocButtons();
   fill(vals);
 }
 function fillOpts(f,cur){const el=$(f.id);const o=f.opts(readNow());const keep=cur!==undefined?cur:el.value;el.innerHTML="";o.forEach(k=>{const op=document.createElement("option");op.value=k;op.textContent=f.lab?f.lab(k):k;el.appendChild(op)});el.value=o.includes(keep)?keep:o[0]}
@@ -472,8 +482,124 @@ function buildWork(inp,r){
   gap(10);ans("FINAL:  qp = "+n2(r.qpPa,0)+" Pa   ·   ULS = "+n2(r.uls,0)+" Pa   ·   vp = "+n2(r.vp,1)+" m/s   ·   altitude = "+n2(r.alt,0)+" m");
   return pages;
 }
-function allPages(inp,r){const p=[buildReport(inp,r)].concat(r.valid?buildWork(inp,r):[]);
+function allPages(inp,r){const p=[buildReport(inp,r)].concat(r.valid?[buildDrawPage(inp,r)].concat(buildWork(inp,r)):[]);
   p.forEach((cv,i)=>{const c=cv.getContext("2d");c.fillStyle="#586875";c.font="19px "+FONT;c.textAlign="right";c.textBaseline="alphabetic";c.fillText("SANS Windload v"+VERSION+" · Page "+(i+1)+" of "+p.length,cv.width-88,2339-30)});return p}
+/* ===================== site map, plan and elevation ===================== */
+/* Satellite photo from Esri World Imagery tiles (CORS-enabled, so it can go into the PDF). Loaded once per position and cached; render() runs again when it arrives. */
+const MAPZ=18,MAPW=1280,MAPH=800;
+const latLon=inp=>{const la=parseFloat(String(inp.lat||"").replace(",",".")),lo=parseFloat(String(inp.lon||"").replace(",","."));return isFinite(la)&&isFinite(lo)&&Math.abs(la)<=85&&Math.abs(lo)<=180&&!(la===0&&lo===0)?{la,lo}:null};
+let MAPC={key:null,state:"none",cv:null,mpp:0};
+function loadMap(la,lo){
+  const n=256*Math.pow(2,MAPZ),cx=(lo+180)/360*n,s=Math.sin(la*Math.PI/180),cy=(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n;
+  const x0=cx-MAPW/2,y0=cy-MAPH/2,cv=document.createElement("canvas");cv.width=MAPW;cv.height=MAPH;const c=cv.getContext("2d");
+  const jobs=[];
+  for(let tx=Math.floor(x0/256);tx<=Math.floor((x0+MAPW)/256);tx++)for(let ty=Math.floor(y0/256);ty<=Math.floor((y0+MAPH)/256);ty++)
+    jobs.push(new Promise((ok,no)=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>{c.drawImage(im,tx*256-x0,ty*256-y0);ok()};im.onerror=no;im.src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/"+MAPZ+"/"+ty+"/"+tx}));
+  return Promise.all(jobs).then(()=>({cv,mpp:156543.03392*Math.cos(la*Math.PI/180)/Math.pow(2,MAPZ)}));
+}
+function mapFor(inp){const p=latLon(inp);if(!p)return {state:"none"};const key=p.la.toFixed(6)+","+p.lo.toFixed(6);if(MAPC.key===key)return MAPC;
+  MAPC={key,state:"loading",cv:null,mpp:0};
+  loadMap(p.la,p.lo).then(m=>{if(MAPC.key===key){MAPC.cv=m.cv;MAPC.mpp=m.mpp;MAPC.state="ok";if(!$("p2").hidden)render()}}).catch(()=>{if(MAPC.key===key){MAPC.state="fail";if(!$("p2").hidden)render()}});
+  return MAPC}
+function addLocButtons(){const w=$("w_lon");if(!w)return;const d=document.createElement("div");d.className="locbtns";
+  const mk=(t,fn)=>{const b=document.createElement("button");b.type="button";b.className="btn";b.textContent=t;b.onclick=fn;d.appendChild(b)};
+  const setLL=(la,lo)=>{$("lat").value=(+la).toFixed(6);$("lon").value=(+lo).toFixed(6);save()};
+  mk("Use my location",()=>{if(!navigator.geolocation){toast("This browser cannot read the GPS position");return}toast("Reading GPS position…");
+    navigator.geolocation.getCurrentPosition(p=>{setLL(p.coords.latitude,p.coords.longitude);toast("Position set from GPS (±"+Math.round(p.coords.accuracy)+" m)")},()=>toast("Could not read the GPS position. Allow location access, or type it in."),{enableHighAccuracy:true,timeout:20000})});
+  mk("Find from address",()=>{const a=($("addr").value||"").replace(/\n/g,", ").trim();if(!a){toast("Enter the site address first");return}toast("Looking up the address…");
+    fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=za&q="+encodeURIComponent(a)).then(r=>r.json()).then(j=>{if(!j||!j.length){toast("Address not found. Try street and suburb only, or use GPS.");return}setLL(j[0].lat,j[0].lon);toast("Found: "+String(j[0].display_name).slice(0,80))}).catch(()=>toast("Address lookup failed. Check the internet connection."))});
+  w.after(d)}
+const DINK="#14212B",DMUT="#586875",DLINE="#B8C3CC";
+const suckCol=(v,mx)=>{const t=mx>0?Math.min(1,Math.max(0,-v)/mx):0;return "rgba(200,52,30,"+(.08+.6*t).toFixed(3)+")"};
+function arrowD(c,x1,y1,x2,y2,s,col){const a=Math.atan2(y2-y1,x2-x1),hl=14*s;c.strokeStyle=col;c.fillStyle=col;c.lineWidth=3*s;c.beginPath();c.moveTo(x1,y1);c.lineTo(x2-hl*.8*Math.cos(a),y2-hl*.8*Math.sin(a));c.stroke();
+  c.beginPath();c.moveTo(x2,y2);c.lineTo(x2-hl*Math.cos(a-.4),y2-hl*Math.sin(a-.4));c.lineTo(x2-hl*Math.cos(a+.4),y2-hl*Math.sin(a+.4));c.closePath();c.fill()}
+function windArrows(c,x1,x2,yc,span,s){const k=span>120*s?3:1;for(let i=0;i<k;i++){const y=k===1?yc:yc-span*.3+i*span*.3;arrowD(c,x1,y,x2,y,s,"#1F6FEB")}
+  c.fillStyle="#1F6FEB";c.font="bold "+Math.round(13*s)+"px "+FONT;c.textAlign="center";c.textBaseline="bottom";c.fillText("WIND",(x1+x2)/2,yc-(k===1?10*s:span*.3+8*s))}
+function dimLine(c,x1,y1,x2,y2,txt,s,vert){c.strokeStyle=DMUT;c.fillStyle=DMUT;c.lineWidth=1.3*s;c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();
+  const t=6*s;c.beginPath();if(vert){c.moveTo(x1-t,y1);c.lineTo(x1+t,y1);c.moveTo(x2-t,y2);c.lineTo(x2+t,y2)}else{c.moveTo(x1,y1-t);c.lineTo(x1,y1+t);c.moveTo(x2,y2-t);c.lineTo(x2,y2+t)}c.stroke();
+  c.font=Math.round(12*s)+"px "+FONT;c.save();if(vert){c.translate(x1+10*s,(y1+y2)/2);c.rotate(-Math.PI/2);c.textAlign="center";c.textBaseline="top";c.fillText(txt,0,0)}else{c.textAlign="center";c.textBaseline="top";c.fillText(txt,(x1+x2)/2,y1+6*s)}c.restore()}
+function zoneBox(c,x1,y1,x2,y2,lab,val,fill,s){if(x2-x1<1||y2-y1<1)return;c.fillStyle=fill;c.fillRect(x1,y1,x2-x1,y2-y1);c.setLineDash([5*s,4*s]);c.strokeStyle=DLINE;c.lineWidth=1*s;c.strokeRect(x1,y1,x2-x1,y2-y1);c.setLineDash([]);
+  const w=x2-x1,h=y2-y1,cx=(x1+x2)/2,cy=(y1+y2)/2;if(w<14*s||h<14*s)return;c.fillStyle=DINK;c.textAlign="center";c.textBaseline="middle";
+  if(h>=36*s&&w>=44*s&&val!==""){c.font="bold "+Math.round(15*s)+"px "+FONT;c.fillText(lab,cx,cy-9*s);c.font=Math.round(11*s)+"px "+FONT;c.fillText(val,cx,cy+9*s)}else{c.font="bold "+Math.round(Math.min(15,h/s*.6,w/s*.6))*s+"px "+FONT;c.fillText(lab,cx,cy)}}
+function panelTitle(c,X,Y,t,s){c.fillStyle=DINK;c.font="bold "+Math.round(14*s)+"px "+FONT;c.textAlign="left";c.textBaseline="top";c.fillText(t,X+12*s,Y+10*s)}
+function drawMapPanel(c,X,Y,W,H,inp,s){
+  c.save();c.fillStyle="#E8EEF3";c.fillRect(X,Y,W,H);const p=latLon(inp),m=mapFor(inp);
+  if(m.state==="ok"){const k=Math.max(W/MAPW,H/MAPH),dw=MAPW*k,dh=MAPH*k;c.beginPath();c.rect(X,Y,W,H);c.clip();c.drawImage(m.cv,X+(W-dw)/2,Y+(H-dh)/2,dw,dh);
+    const px=X+W/2,py=Y+H/2;c.fillStyle="#C8341E";c.strokeStyle="#fff";c.lineWidth=3*s;c.beginPath();c.arc(px,py-26*s,13*s,Math.PI*.85,Math.PI*.15);c.lineTo(px,py);c.closePath();c.fill();c.stroke();c.fillStyle="#fff";c.beginPath();c.arc(px,py-26*s,5*s,0,7);c.fill();
+    const mpp=m.mpp/k,opts=[20,50,100,200,500],len=opts.find(v=>v/mpp>W*.12)||500,bl=len/mpp,bx=X+16*s,by=Y+H-22*s;
+    c.fillStyle="rgba(255,255,255,.85)";c.fillRect(bx-8*s,by-26*s,bl+16*s,36*s);c.fillStyle=DINK;c.fillRect(bx,by,bl,5*s);c.font="bold "+Math.round(12*s)+"px "+FONT;c.textAlign="left";c.textBaseline="bottom";c.fillText(len+" m",bx,by-3*s);
+    const nx=X+W-34*s,ny=Y+48*s;c.fillStyle="rgba(255,255,255,.85)";c.beginPath();c.arc(nx,ny,22*s,0,7);c.fill();c.fillStyle=DINK;c.beginPath();c.moveTo(nx,ny-16*s);c.lineTo(nx+8*s,ny+6*s);c.lineTo(nx,ny+1*s);c.lineTo(nx-8*s,ny+6*s);c.closePath();c.fill();c.font="bold "+Math.round(11*s)+"px "+FONT;c.textAlign="center";c.textBaseline="top";c.fillText("N",nx,ny+6*s);
+    c.font=Math.round(10*s)+"px "+FONT;c.textAlign="right";c.textBaseline="bottom";const at="Imagery © Esri, Maxar, Earthstar Geographics";const aw=c.measureText(at).width;c.fillStyle="rgba(255,255,255,.8)";c.fillRect(X+W-aw-14*s,Y+H-18*s,aw+14*s,18*s);c.fillStyle=DINK;c.fillText(at,X+W-7*s,Y+H-3*s)}
+  else{c.fillStyle=DMUT;c.font=Math.round(14*s)+"px "+FONT;c.textAlign="center";c.textBaseline="middle";
+    c.fillText(m.state==="loading"?"Loading satellite photo…":m.state==="fail"?"Satellite photo could not load (no internet connection?)":"No site position entered. Add latitude and longitude on the inputs page to show the satellite photo.",X+W/2,Y+H/2)}
+  const t="SITE LOCATION"+(p?"   "+p.la.toFixed(5)+", "+p.lo.toFixed(5):"")+(inp.addr?"   ·   "+inp.addr.replace(/\n/g,", "):"");
+  c.font="bold "+Math.round(14*s)+"px "+FONT;let tt=t;while(c.measureText(tt).width>W-110*s&&tt.length>8)tt=tt.slice(0,-2);if(tt!==t)tt+="…";
+  c.fillStyle="rgba(255,255,255,.88)";c.fillRect(X,Y,c.measureText(tt).width+24*s,34*s);panelTitle(c,X,Y,tt,s);
+  c.restore()}
+function roofRects(r){/* plan rectangles in metres, wind along x from 0: [zone,x1,x2,y1,y2] (EN 1991-1-4 / SANS 10160-3 zone layout, wind 0°) */
+  const e=r.e,d=r.d,b=r.b,q=Math.min(e/4,b/2),out=[],fl=r.roofName.startsWith("Flat"),mo=/^Mono/.test(r.roofName),half=fl||mo?d:d/2,w=Math.min(e/10,half);
+  out.push(["F",0,w,0,q],["F",0,w,b-q,b]);if(b-2*q>0)out.push(["G",0,w,q,b-q]);
+  if(fl){out.push(["H",w,Math.min(e/2,d),0,b]);if(d>e/2)out.push(["I",e/2,d,0,b])}
+  else if(mo){out.push(["H",w,d,0,b])}
+  else{out.push(["H",w,half,0,b]);const j=Math.min(e/10,half);out.push(["J",half,half+j,0,b]);out.push(["I",half+j,d,0,b])}
+  return out.filter(z=>z[2]-z[1]>1e-6&&z[4]-z[3]>1e-6)}
+function wallBands(r){const e=r.e,d=r.d,o=[["A",0,Math.min(e/5,d)]];if(d>e/5)o.push(["B",e/5,Math.min(e,d)]);if(d>e)o.push(["C",e,d]);return o}
+function drawPlan(c,X,Y,W,H,r,inp,s){
+  c.save();c.fillStyle="#fff";c.fillRect(X,Y,W,H);c.strokeStyle=DLINE;c.lineWidth=1*s;c.strokeRect(X+.5,Y+.5,W-1,H-1);
+  panelTitle(c,X,Y,"PLAN VIEW",s);
+  const pL=130*s,pR=90*s,pT=78*s,pB=76*s,sc=Math.min((W-pL-pR)/r.d,(H-pT-pB)/r.b),bw=r.d*sc,bh=r.b*sc,x0=X+pL+(W-pL-pR-bw)/2,y0=Y+pT+(H-pT-pB-bh)/2;
+  const mx=Math.max(.01,...[...r.R,...r.W].map(z=>-z.lo)),RZ={},WZ={};r.R.forEach(z=>RZ[z.z]=z);r.W.forEach(z=>WZ[z.z]=z);
+  roofRects(r).forEach(([z,a,b2,y1,y2])=>{const R=RZ[z];zoneBox(c,x0+a*sc,y0+y1*sc,x0+b2*sc,y0+y2*sc,z,R?sgn(R.lo):"",R?suckCol(R.lo,mx):"#eee",s)});
+  if(!/^Flat|^Mono/.test(r.roofName)){c.strokeStyle=DINK;c.lineWidth=1.5*s;c.setLineDash([10*s,6*s]);c.beginPath();
+    if(/^Hipped/.test(r.roofName)){const hh=Math.min(r.d/2,r.b/2);c.moveTo(x0,y0);c.lineTo(x0+bw/2,y0+hh*sc);c.lineTo(x0+bw,y0);c.moveTo(x0,y0+bh);c.lineTo(x0+bw/2,y0+bh-hh*sc);c.lineTo(x0+bw,y0+bh);c.moveTo(x0+bw/2,y0+hh*sc);c.lineTo(x0+bw/2,y0+bh-hh*sc)}
+    else{c.moveTo(x0+bw/2,y0);c.lineTo(x0+bw/2,y0+bh)}c.stroke();c.setLineDash([]);
+    c.fillStyle=DMUT;c.font=Math.round(11*s)+"px "+FONT;c.textAlign="left";c.textBaseline="bottom";c.fillText("ridge",x0+bw/2+4*s,y0-2*s)}
+  const ws=12*s;
+  const wall=(z,x1,y1,x2,y2,lx,ly,al)=>{const Z=WZ[z];if(!Z)return;c.fillStyle=z==="D"?"rgba(23,54,77,.75)":suckCol(Z.lo,mx);c.fillRect(x1,y1,x2-x1,y2-y1);c.strokeStyle=DINK;c.lineWidth=1*s;c.strokeRect(x1,y1,x2-x1,y2-y1);
+    c.fillStyle=DINK;c.font="bold "+Math.round(13*s)+"px "+FONT;c.textAlign=al;c.textBaseline="middle";c.fillText(z+" "+(z==="D"?sgn(Z.hi):sgn(Z.lo)),lx,ly)};
+  wall("D",x0-ws,y0,x0,y0+bh,x0-ws-6*s,y0-16*s,"right");
+  wall("E",x0+bw,y0,x0+bw+ws,y0+bh,x0+bw+ws+6*s,y0+bh/2,"left");
+  wallBands(r).forEach(([z,a,b2])=>{const x1=x0+a*sc,x2=x0+b2*sc;wall(z,x1,y0-ws,x2,y0,(x1+x2)/2,y0-ws-12*s,"center");wall(z,x1,y0+bh,x2,y0+bh+ws,(x1+x2)/2,y0+bh+ws+12*s,"center")});
+  c.strokeStyle=DINK;c.lineWidth=2.5*s;c.strokeRect(x0,y0,bw,bh);
+  windArrows(c,X+18*s,x0-ws-22*s,y0+bh/2,bh,s);
+  dimLine(c,x0,y0+bh+ws+34*s,x0+bw,y0+bh+ws+34*s,"d = "+fmt(r.d,1)+" m (along the wind)",s,false);
+  dimLine(c,x0+bw+ws+60*s,y0,x0+bw+ws+60*s,y0+bh,"b = "+fmt(r.b,1)+" m",s,true);
+  c.fillStyle=DMUT;c.font=Math.round(11*s)+"px "+FONT;c.textAlign="right";c.textBaseline="top";c.fillText("e = "+fmt(r.e,1)+" m  ·  values kPa, characteristic, net of cpi",X+W-12*s,Y+13*s);
+  c.restore()}
+function drawElev(c,X,Y,W,H,r,inp,s){
+  c.save();c.fillStyle="#fff";c.fillRect(X,Y,W,H);c.strokeStyle=DLINE;c.lineWidth=1*s;c.strokeRect(X+.5,Y+.5,W-1,H-1);
+  panelTitle(c,X,Y,"SIDE ELEVATION",s);
+  const fl=r.roofName.startsWith("Flat"),mo=/^Mono/.test(r.roofName),pit=+inp.pitch||0,tn=Math.tan(pit*Math.PI/180);
+  const rise=fl?0:(mo?r.d:r.d/2)*tn;let he=r.h-rise;const clamp=he<r.h*.25;if(clamp)he=r.h*.25;
+  const pL=130*s,pR=110*s,pT=70*s,pB=74*s,sc=Math.min((W-pL-pR)/r.d,(H-pT-pB)/r.h),bw=r.d*sc,x0=X+pL+(W-pL-pR-bw)/2,gy=Y+H-pB,top=gy-r.h*sc,ey=gy-he*sc;
+  const mx=Math.max(.01,...[...r.R,...r.W].map(z=>-z.lo)),WZ={};r.W.forEach(z=>WZ[z.z]=z);
+  c.strokeStyle=DMUT;c.lineWidth=2*s;c.beginPath();c.moveTo(X+20*s,gy);c.lineTo(X+W-20*s,gy);c.stroke();
+  for(let gx=X+24*s;gx<X+W-24*s;gx+=14*s){c.beginPath();c.moveTo(gx,gy);c.lineTo(gx-8*s,gy+8*s);c.lineWidth=1*s;c.stroke()}
+  const wt=fl?top:ey;
+  wallBands(r).forEach(([z,a,b2])=>{const Z=WZ[z];zoneBox(c,x0+a*sc,wt,x0+b2*sc,gy,z,Z?sgn(Z.lo):"",Z?suckCol(Z.lo,mx):"#eee",s)});
+  c.strokeStyle=DINK;c.lineWidth=2.5*s;c.fillStyle="rgba(88,104,117,.18)";c.beginPath();
+  if(fl){c.rect(x0,top,bw,gy-top);c.stroke();const hp=+inp.hp||0;if(hp>0){const py=top+hp*r.h*sc;c.setLineDash([8*s,5*s]);c.lineWidth=1.3*s;c.beginPath();c.moveTo(x0,py);c.lineTo(x0+bw,py);c.stroke();c.setLineDash([]);c.fillStyle=DMUT;c.font=Math.round(11*s)+"px "+FONT;c.textAlign="center";c.textBaseline="bottom";c.fillText("roof level behind parapet",x0+bw/2,py-2*s)}}
+  else{c.moveTo(x0,ey);if(mo)c.lineTo(x0+bw,top);else c.lineTo(x0+bw/2,top);c.lineTo(x0+bw,mo?top:ey);c.lineTo(x0+bw,ey);c.closePath();c.fill();c.stroke();c.beginPath();c.rect(x0,ey,bw,gy-ey);c.stroke();
+    c.fillStyle=DINK;c.font="bold "+Math.round(12*s)+"px "+FONT;c.textAlign="left";c.textBaseline="bottom";c.fillText(fmt(pit,0)+"°",x0+14*s,ey-4*s)}
+  const D=WZ.D,E=WZ.E;c.font="bold "+Math.round(13*s)+"px "+FONT;c.textBaseline="middle";
+  c.fillStyle="rgba(23,54,77,.75)";c.fillRect(x0-10*s,wt,10*s,gy-wt);c.fillStyle=suckCol(E.lo,mx);c.fillRect(x0+bw,wt,10*s,gy-wt);
+  c.fillStyle=DINK;c.textAlign="right";c.fillText("D "+sgn(D.hi),x0-16*s,wt-14*s);c.textAlign="left";c.fillText("E "+sgn(E.lo),x0+bw+16*s,wt-14*s);
+  windArrows(c,X+18*s,x0-24*s,(wt+gy)/2-10*s,Math.min(gy-wt,160*s),s);
+  dimLine(c,x0,gy+30*s,x0+bw,gy+30*s,"d = "+fmt(r.d,1)+" m",s,false);
+  dimLine(c,x0+bw+70*s,top,x0+bw+70*s,gy,"h = "+fmt(r.h,1)+" m",s,true);
+  if(!fl){c.fillStyle=DMUT;c.font=Math.round(11*s)+"px "+FONT;c.textAlign="right";c.textBaseline="top";c.fillText(clamp?"Eaves drawn at ¼ h (pitch too steep for h and d)":"Eaves height about "+fmt(he,1)+" m",X+W-12*s,Y+13*s)}
+  c.restore()}
+function drawSheets(inp,r){const mk=(w,h)=>{const cv=document.createElement("canvas");cv.width=w;cv.height=h;return cv},s=2.2;
+  const a=mk(1300,760);drawMapPanel(a.getContext("2d"),0,0,1300,760,inp,s);
+  const b=mk(1300,820);drawPlan(b.getContext("2d"),0,0,1300,820,r,inp,s);
+  const e=mk(1300,700);drawElev(e.getContext("2d"),0,0,1300,700,r,inp,s);
+  return [[a,"Satellite photo of the site"],[b,"Plan view of the building with roof and wall zones"],[e,"Side elevation of the building with wall zones"]]}
+function buildDrawPage(inp,r){
+  const cv=document.createElement("canvas");cv.width=1654;cv.height=2339;const c=cv.getContext("2d"),M=88,Wd=1654-2*M;c.fillStyle="#fff";c.fillRect(0,0,1654,2339);
+  c.fillStyle="#17364D";c.fillRect(0,0,1654,104);c.fillStyle="#fff";c.textAlign="left";c.textBaseline="alphabetic";c.font="bold 40px "+FONT;c.fillText("SANS Windload - Site and building",M,66);
+  c.font="23px "+FONT;c.textAlign="right";c.fillStyle="#C9D8E4";c.fillText(((inp.cust||"-")+"  ·  "+(inp.ref||(r.m?r.m.m:""))).slice(0,70),1654-M,66);
+  const s=1.75;drawMapPanel(c,M,140,Wd,760,inp,s);drawPlan(c,M,930,Wd,700,r,inp,s);drawElev(c,M,1660,Wd,560,r,inp,s);
+  return cv}
 /* ===================== UI ===================== */
 let cur=null,pdfBlob=null;
 function show(n){$("p1").hidden=n!==1;$("p2").hidden=n!==2;$("tab1").setAttribute("aria-selected",n===1);$("tab2").setAttribute("aria-selected",n===2);bar(n);window.scrollTo(0,0);if(n===2)render()}
@@ -499,6 +625,7 @@ function render(){
   grp("Walls");r.W.forEach(x=>addRow([x.z+" "+x.n,cpeTxt(x.cpe),sgn(x.lo),sgn(x.hi)]));
   grp(r.roofName);r.R.forEach(x=>addRow([x.z+" "+x.n,cpeTxt(x.cpe),sgn(x.lo),sgn(x.hi)]));
   drawScreen();
+  const dw=$("drw");dw.innerHTML="";drawSheets(inp,r).forEach(([cv,alt])=>{const im=document.createElement("img");im.alt=alt;im.src=cv.toDataURL("image/jpeg",0.85);dw.appendChild(im)});
   const pages=allPages(inp,r);const pv=$("previews");pv.innerHTML="";pages.forEach((cv,i)=>{const im=document.createElement("img");im.alt="A4 report page "+(i+1);im.src=cv.toDataURL("image/jpeg",0.8);pv.appendChild(im)});pdfBlob=pdfFromCanvas(pages);
 }
 function drawScreen(){if(!cur||!cur.r.valid)return;const cv=$("chart");const w=cv.parentElement.clientWidth||340;const dpr=Math.min(window.devicePixelRatio||1,3);const n=cur.r.W.length+cur.r.R.length;const h=Math.round(Math.max(300,60+n*26));
